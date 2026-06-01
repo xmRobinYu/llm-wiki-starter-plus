@@ -161,6 +161,7 @@ Optional CLI workflow scaffold:
 npm run cli -- help
 npm run cli -- ingest --root ./my-wiki ./notes/article.md
 npm run cli -- ingest --root ./my-wiki "https://example.com"
+npm run cli -- ingest --root ./my-wiki --domain research ./notes/article.md
 npm run cli -- lint --root ./my-wiki
 npm run cli -- graph --root ./my-wiki
 npm run cli -- query --root ./my-wiki --save "What belongs in this wiki?"
@@ -181,7 +182,7 @@ The CLI currently provides a thin command surface for future automation:
 - `llm-wiki lint`
 - `llm-wiki graph`
 
-`ingest` copies a local markdown file into `raw/` or fetches a URL into `raw/`, then creates a draft `source` summary page.
+`ingest` copies a local markdown file into `raw/` or fetches a URL into `raw/`, then creates a draft `source` summary page. Use `--domain <name>` to choose the raw subdirectory and persist that domain in source metadata.
 
 `lint` prints issues to the terminal and also writes a markdown report to `wiki/reports/`.
 

@@ -113,6 +113,13 @@ function parseFrontmatter(content) {
   return fields;
 }
 
+function stripFrontmatter(content) {
+  if (!content.startsWith("---\n")) return content;
+  const end = content.indexOf("\n---\n", 4);
+  if (end === -1) return content;
+  return content.slice(end + 5);
+}
+
 function extractWikiLinks(content) {
   const matches = content.match(/\[\[([^\]]+)\]\]/g) || [];
   return matches.map((match) => match.slice(2, -2).split("|")[0].trim()).filter(Boolean);
@@ -332,6 +339,22 @@ function decodeHtmlEntities(value) {
     .replace(/&#39;/g, "'");
 }
 
+function extractMetaContent(content, name) {
+  const patterns = [
+    new RegExp(`<meta[^>]+property=["']${name}["'][^>]+content=["']([^"']+)["'][^>]*>`, "i"),
+    new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+property=["']${name}["'][^>]*>`, "i"),
+    new RegExp(`<meta[^>]+name=["']${name}["'][^>]+content=["']([^"']+)["'][^>]*>`, "i"),
+    new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+name=["']${name}["'][^>]*>`, "i")
+  ];
+  for (const pattern of patterns) {
+    const match = content.match(pattern);
+    if (match?.[1]) {
+      return decodeHtmlEntities(match[1].trim());
+    }
+  }
+  return "";
+}
+
 function extractTitleFromMarkdown(content, fallback) {
   const frontmatter = parseFrontmatter(content);
   if (frontmatter?.title) {
@@ -348,22 +371,79 @@ function extractTitleFromHtml(content, fallback) {
   return decodeHtmlEntities(match[1].replace(/<[^>]+>/g, "").trim()) || fallback;
 }
 
-function stripHtmlToText(content) {
+function extractReadableHtmlText(content) {
+  const container =
+    content.match(/<article[^>]*>([\s\S]*?)<\/article>/i)?.[1] ||
+    content.match(/<main[^>]*>([\s\S]*?)<\/main>/i)?.[1] ||
+    content.match(/<body[^>]*>([\s\S]*?)<\/body>/i)?.[1] ||
+    content;
+
   return decodeHtmlEntities(
-    content
+    container
       .replace(/<script[\s\S]*?<\/script>/gi, "")
       .replace(/<style[\s\S]*?<\/style>/gi, "")
       .replace(/<noscript[\s\S]*?<\/noscript>/gi, "")
+      .replace(/<svg[\s\S]*?<\/svg>/gi, "")
+      .replace(/<(nav|header|footer|aside|form)[^>]*>[\s\S]*?<\/\1>/gi, "")
+      .replace(/<\/li>/gi, "\n")
+      .replace(/<li[^>]*>/gi, "- ")
+      .replace(/<\/h1>/gi, "\n")
+      .replace(/<h1[^>]*>/gi, "# ")
+      .replace(/<\/h2>/gi, "\n")
+      .replace(/<h2[^>]*>/gi, "## ")
+      .replace(/<\/h3>/gi, "\n")
+      .replace(/<h3[^>]*>/gi, "### ")
       .replace(/<\/(p|div|section|article|li|h[1-6]|br)>/gi, "\n")
       .replace(/<[^>]+>/g, " ")
       .replace(/[ \t]+\n/g, "\n")
+      .replace(/\n[ \t]+/g, "\n")
       .replace(/\n{3,}/g, "\n\n")
       .trim()
   );
 }
 
+function extractMarkdownSummary(content) {
+  const body = stripFrontmatter(content);
+  const lines = body
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !line.startsWith("---") && !line.startsWith("#"));
+  return lines[0] || "";
+}
+
+function extractTextSummary(content, title = "") {
+  const normalizedTitle = title.trim().toLowerCase();
+  const paragraphs = content
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !line.startsWith("#"));
+
+  for (const paragraph of paragraphs) {
+    if (normalizedTitle && paragraph.toLowerCase() === normalizedTitle) continue;
+    if (paragraph.length < 20) continue;
+    return paragraph.slice(0, 240);
+  }
+
+  return "";
+}
+
+function detectMedia(target, isUrl) {
+  if (!isUrl) return "article";
+  const lower = target.toLowerCase();
+  if (lower.includes("youtube.com") || lower.includes("youtu.be") || lower.includes("bilibili.com")) {
+    return "video";
+  }
+  return "article";
+}
+
+function normalizeDomainName(domain) {
+  return domain.trim().replace(/[\\/:*?"<>|]/g, "-");
+}
+
 function chooseRawSubdir(root, kind, domain) {
-  if (domain) return domain;
+  if (domain) return normalizeDomainName(domain);
   if (kind === "url") {
     return isZhWikiRoot(root) ? "网页" : "web";
   }
@@ -374,17 +454,17 @@ function getSummaryDir(root) {
   return path.join(root, "wiki", isZhWikiRoot(root) ? "资料摘要" : "summaries");
 }
 
-function buildSourcePage(root, title, rawRelativePath, sourceUrl, media, sourceKind) {
+function buildSourcePage(root, meta) {
   const zh = isZhWikiRoot(root);
   const now = new Date().toISOString().slice(0, 10);
   const indexName = path.basename(findIndexPage(root), ".md");
   const summaryPrefix = zh ? "资料摘要" : "Summary";
-  const pageTitle = `${summaryPrefix}：${title}`;
+  const pageTitle = `${summaryPrefix}：${meta.title}`;
   const sourceLabel = zh ? "来源文件" : "Source file";
-  const sourceUrlLine = sourceUrl
+  const sourceUrlLine = meta.sourceUrl
     ? zh
-      ? `来源链接：${sourceUrl}`
-      : `Source URL: ${sourceUrl}`
+      ? `来源链接：${meta.sourceUrl}`
+      : `Source URL: ${meta.sourceUrl}`
     : zh
       ? "来源链接："
       : "Source URL: ";
@@ -394,8 +474,17 @@ function buildSourcePage(root, title, rawRelativePath, sourceUrl, media, sourceK
   const headings = zh
     ? ["## 核心要点", "## 详细笔记", "## 引用与数据", "## 相关"]
     : ["## Key Takeaways", "## Detailed Notes", "## Quotes & Data", "## Related"];
-  const draftLine = zh ? "摘要待补全。" : "Summary pending refinement.";
-  const rawLine = zh ? `${sourceLabel}：\`${rawRelativePath}\`` : `${sourceLabel}: \`${rawRelativePath}\``;
+  const draftLine = meta.summary || (zh ? "摘要待补全。" : "Summary pending refinement.");
+  const rawLine = zh ? `${sourceLabel}：\`${meta.rawRelativePath}\`` : `${sourceLabel}: \`${meta.rawRelativePath}\``;
+  const domainLine = zh
+    ? `领域：${meta.domain || ""}`
+    : `Domain: ${meta.domain || ""}`;
+  const kindLine = zh
+    ? `来源类型：${meta.sourceKind}`
+    : `Source kind: ${meta.sourceKind}`;
+  const fetchedLine = zh
+    ? `抓取时间：${meta.fetchedAt || ""}`
+    : `Fetched at: ${meta.fetchedAt || ""}`;
 
   return {
     title: pageTitle,
@@ -407,11 +496,14 @@ tags: []
 created: ${now}
 updated: ${now}
 sources: []
-domain: ""
+domain: ${quoteYaml(meta.domain || "")}
 confidence: low
 summary: ${quoteYaml(draftLine)}
-source_url: ${quoteYaml(sourceUrl || "")}
-media: ${media}
+source_url: ${quoteYaml(meta.sourceUrl || "")}
+media: ${meta.media}
+raw_path: ${quoteYaml(meta.rawRelativePath)}
+source_kind: ${quoteYaml(meta.sourceKind)}
+fetched_at: ${quoteYaml(meta.fetchedAt || "")}
 ---
 
 ${blockquote}
@@ -423,10 +515,13 @@ ${headings[0]}
 ${headings[1]}
 
 ${rawLine}
+${zh ? "\n" : "\n\n"}${domainLine}
 
 ${sourceUrlLine}
 
-Source kind: ${sourceKind}
+${kindLine}
+
+${fetchedLine}
 
 ${headings[2]}
 
@@ -514,8 +609,10 @@ async function runIngest(root, rawArgs) {
   let rawPath = "";
   let rawContent = "";
   let sourceUrl = "";
-  let media = "article";
+  let media = detectMedia(target, isUrl);
   let sourceKind = isUrl ? "url" : "file";
+  let fetchedAt = "";
+  let extractedSummary = "";
 
   if (isUrl) {
     const response = await fetch(target);
@@ -527,19 +624,27 @@ async function runIngest(root, rawArgs) {
     title = sanitizeTitleFragment(
       extractTitleFromHtml(responseText, url.pathname.split("/").filter(Boolean).pop() || url.hostname)
     );
+    extractedSummary =
+      extractMetaContent(responseText, "og:description") ||
+      extractMetaContent(responseText, "twitter:description") ||
+      extractMetaContent(responseText, "description");
+    const readableText = extractReadableHtmlText(responseText);
+    if (!extractedSummary) {
+      extractedSummary = extractTextSummary(readableText, title);
+    }
+    fetchedAt = new Date().toISOString();
     rawContent = `# ${title}
 
 Source URL: ${target}
 
-Fetched at: ${new Date().toISOString()}
+Fetched at: ${fetchedAt}
 
 ## Extracted Content
 
-${stripHtmlToText(responseText)}
+${readableText}
 `;
     rawPath = uniquePath(path.join(rawDir, `${title}.md`));
     sourceUrl = target;
-    media = "article";
   } else {
     const inputPath = path.resolve(target);
     if (!fs.existsSync(inputPath)) {
@@ -550,9 +655,9 @@ ${stripHtmlToText(responseText)}
     }
     rawContent = fs.readFileSync(inputPath, "utf8");
     title = sanitizeTitleFragment(extractTitleFromMarkdown(rawContent, path.basename(inputPath, ".md")));
+    extractedSummary = extractMarkdownSummary(rawContent);
     const insideRoot = !path.relative(path.join(root, "raw"), inputPath).startsWith("..");
     rawPath = insideRoot ? inputPath : uniquePath(path.join(rawDir, `${title}.md`));
-    media = "article";
     sourceKind = "file";
     if (!insideRoot) {
       fs.writeFileSync(rawPath, rawContent, "utf8");
@@ -564,7 +669,16 @@ ${stripHtmlToText(responseText)}
   }
 
   const rawRelativePath = relativeTo(root, rawPath);
-  const sourcePage = buildSourcePage(root, title, rawRelativePath, sourceUrl, media, sourceKind);
+  const sourcePage = buildSourcePage(root, {
+    title,
+    rawRelativePath,
+    sourceUrl,
+    media,
+    sourceKind,
+    fetchedAt,
+    domain: normalizeDomainName(domain || ""),
+    summary: extractedSummary
+  });
   const summaryPath = uniquePath(path.join(summaryDir, `${sourcePage.title}.md`));
   fs.writeFileSync(summaryPath, sourcePage.content, "utf8");
 

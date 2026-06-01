@@ -1,13 +1,19 @@
 ---
 title: 
 type: source
+status: draft
 tags: []
 created: 
 updated: 
 sources: []
+domain: ""
 confidence: medium
+summary: ""
 source_url: 
 media: 
+raw_path: ""
+source_kind: ""
+fetched_at: ""
 ---
 
 > 对该资料的一段话摘要。

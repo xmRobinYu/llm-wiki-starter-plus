@@ -71,6 +71,9 @@ summary: ""                       # 便于快速扫读的一句话摘要
 related_concepts: []               # 可选，concept 类型页面使用
 source_url: https://...            # 可选，仅 source 类型页面
 media: article | paper | video     # 可选，仅 source 类型页面
+raw_path: raw/...                  # 可选，仅 source 类型页面
+source_kind: file | url            # 可选，仅 source 类型页面
+fetched_at: YYYY-MM-DDTHH:MM:SSZ   # 可选，仅 source 类型页面
 ---
 ```
 

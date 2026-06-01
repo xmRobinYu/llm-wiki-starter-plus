@@ -161,6 +161,7 @@ claude
 npm run cli -- help
 npm run cli -- ingest --root ./my-wiki ./notes/article.md
 npm run cli -- ingest --root ./my-wiki "https://example.com"
+npm run cli -- ingest --root ./my-wiki --domain 研究 ./notes/article.md
 npm run cli -- lint --root ./my-wiki
 npm run cli -- graph --root ./my-wiki
 npm run cli -- query --root ./my-wiki --save "这个知识库适合收录什么？"
@@ -181,7 +182,7 @@ CLI 目前提供一层很薄的统一命令入口，便于后续自动化：
 - `llm-wiki lint`
 - `llm-wiki graph`
 
-`ingest` 会把本地 markdown 文件复制到 `raw/`，或抓取 URL 内容落到 `raw/`，然后自动创建一个 `source` 资料摘要草稿页。
+`ingest` 会把本地 markdown 文件复制到 `raw/`，或抓取 URL 内容落到 `raw/`，然后自动创建一个 `source` 资料摘要草稿页。可用 `--domain <名称>` 指定原始资料子目录，并把该领域写入 source metadata。
 
 `lint` 除了终端输出外，还会把 markdown 巡检报告写入 `wiki/巡检报告/`。
 

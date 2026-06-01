@@ -73,6 +73,9 @@ summary: ""                            # One-sentence description for quick scan
 related_concepts: []                   # Optional, concept pages only
 source_url: https://...                # Optional, source pages only
 media: article | paper | video         # Optional, source pages only
+raw_path: raw/...                      # Optional, source pages only
+source_kind: file | url                # Optional, source pages only
+fetched_at: YYYY-MM-DDTHH:MM:SSZ       # Optional, source pages only
 ---
 ```
 
