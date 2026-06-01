@@ -163,6 +163,8 @@ npm run cli -- lint --root ./my-wiki
 npm run cli -- graph --root ./my-wiki
 ```
 
+`graph` writes a portable graph export to `graph/graph.json`.
+
 Then chat with the AI:
 
 - **Ingest** → `Ingest this article: https://example.com/some-article`

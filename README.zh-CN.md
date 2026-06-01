@@ -163,6 +163,8 @@ npm run cli -- lint --root ./my-wiki
 npm run cli -- graph --root ./my-wiki
 ```
 
+`graph` 会把可移植图谱导出到 `graph/graph.json`。
+
 然后与 AI 对话：
 
 - **摄取** → `摄取这篇文章：https://example.com/some-article`

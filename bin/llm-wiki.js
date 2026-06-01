@@ -221,6 +221,73 @@ function runLint(root) {
   }
 }
 
+function ensureDir(dirPath) {
+  fs.mkdirSync(dirPath, { recursive: true });
+}
+
+function runGraph(root) {
+  const wikiDir = path.join(root, "wiki");
+  const graphDir = path.join(root, "graph");
+  const wikiFiles = walkFiles(wikiDir)
+    .filter((file) => file.endsWith(".md"))
+    .filter((file) => path.basename(file) !== "sortspec.md");
+
+  const pages = wikiFiles.map((file) => {
+    const content = fs.readFileSync(file, "utf8");
+    const relPath = relativeTo(root, file);
+    const basename = path.basename(file, ".md");
+    const frontmatter = parseFrontmatter(content);
+    return {
+      id: basename,
+      title: basename,
+      type: frontmatter?.type || (isSystemWikiPage(basename) ? "system" : "unknown"),
+      path: relPath,
+      summary: frontmatter?.summary || "",
+      links: extractWikiLinks(content)
+    };
+  });
+
+  const pageMap = new Map(pages.map((page) => [page.id, page]));
+  const edges = [];
+  const seenEdges = new Set();
+
+  for (const page of pages) {
+    for (const target of page.links) {
+      if (!pageMap.has(target)) continue;
+      const key = `${page.id}=>${target}`;
+      if (seenEdges.has(key)) continue;
+      seenEdges.add(key);
+      edges.push({
+        source: page.id,
+        target,
+        kind: "wikilink"
+      });
+    }
+  }
+
+  const graph = {
+    generatedAt: new Date().toISOString(),
+    root,
+    nodes: pages.map((page) => ({
+      id: page.id,
+      title: page.title,
+      type: page.type,
+      path: page.path,
+      summary: page.summary
+    })),
+    edges
+  };
+
+  ensureDir(graphDir);
+  const graphPath = path.join(graphDir, "graph.json");
+  fs.writeFileSync(graphPath, `${JSON.stringify(graph, null, 2)}\n`, "utf8");
+
+  console.log(`[graph] root: ${root}`);
+  console.log(`nodes: ${graph.nodes.length}`);
+  console.log(`edges: ${graph.edges.length}`);
+  console.log(`output: ${relativeTo(root, graphPath)}`);
+}
+
 function printPlannedAction(name, root, detail) {
   console.log(`[planned] ${name}`);
   console.log(`root: ${root}`);
@@ -268,11 +335,7 @@ switch (command) {
     break;
   }
   case "graph": {
-    printPlannedAction(
-      "graph",
-      root,
-      "next step: scan wiki markdown and export graph/graph.json plus graph/index.html"
-    );
+    runGraph(root);
     break;
   }
   default:
