@@ -225,6 +225,283 @@ function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
 }
 
+function buildGraphHtml() {
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LLM Wiki Graph</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f1ea;
+      --panel: #fffdf8;
+      --line: #d8cfbf;
+      --ink: #1f1b16;
+      --muted: #6d6254;
+      --accent: #0d6b5f;
+      --accent-soft: #d9eee9;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+      background: linear-gradient(180deg, #efe7da 0%, var(--bg) 100%);
+      color: var(--ink);
+    }
+    header {
+      padding: 32px 24px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 32px;
+      line-height: 1.1;
+    }
+    .subtitle {
+      color: var(--muted);
+      max-width: 70ch;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 16px;
+      padding: 16px 24px 24px;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(31, 27, 22, 0.06);
+    }
+    .panel h2 {
+      margin: 0;
+      padding: 16px 18px;
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+    }
+    .panel-body {
+      padding: 14px 16px 16px;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .stat {
+      padding: 12px;
+      border-radius: 12px;
+      background: #f7f3eb;
+      border: 1px solid var(--line);
+    }
+    .stat-label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .stat-value {
+      font-size: 22px;
+      font-weight: 700;
+    }
+    input[type="search"] {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font: inherit;
+      background: #fff;
+      color: var(--ink);
+      margin-bottom: 12px;
+    }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 12px;
+      border: 1px solid rgba(13, 107, 95, 0.15);
+    }
+    .list {
+      display: grid;
+      gap: 10px;
+      max-height: 70vh;
+      overflow: auto;
+      padding-right: 4px;
+    }
+    .node {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      background: #fff;
+    }
+    .node-title {
+      font-size: 18px;
+      margin: 0 0 6px;
+    }
+    .node-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .node-summary {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .edge-list {
+      margin-top: 24px;
+      border-top: 1px dashed var(--line);
+      padding-top: 16px;
+    }
+    .edge-item {
+      font-size: 13px;
+      color: var(--muted);
+      padding: 4px 0;
+    }
+    .empty {
+      color: var(--muted);
+      font-style: italic;
+    }
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>LLM Wiki Graph</h1>
+    <div class="subtitle">Portable graph view generated from wiki markdown. This page reads <code>graph.json</code> from the same folder and renders nodes plus wikilink relationships.</div>
+  </header>
+  <main class="layout">
+    <section class="panel">
+      <h2>Controls</h2>
+      <div class="panel-body">
+        <div class="stats">
+          <div class="stat">
+            <span class="stat-label">Nodes</span>
+            <span class="stat-value" id="nodeCount">0</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Edges</span>
+            <span class="stat-value" id="edgeCount">0</span>
+          </div>
+        </div>
+        <input id="search" type="search" placeholder="Filter nodes by title, type, or path" />
+        <div class="legend" id="legend"></div>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Nodes</h2>
+      <div class="panel-body">
+        <div id="nodes" class="list"></div>
+      </div>
+    </section>
+  </main>
+  <script>
+    const nodeCount = document.getElementById("nodeCount");
+    const edgeCount = document.getElementById("edgeCount");
+    const nodesEl = document.getElementById("nodes");
+    const legendEl = document.getElementById("legend");
+    const searchEl = document.getElementById("search");
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    }
+
+    function render(data, query = "") {
+      const normalized = query.trim().toLowerCase();
+      const nodes = data.nodes.filter((node) => {
+        if (!normalized) return true;
+        return [node.title, node.type, node.path, node.summary].join(" ").toLowerCase().includes(normalized);
+      });
+
+      const edgesBySource = new Map();
+      for (const edge of data.edges) {
+        if (!edgesBySource.has(edge.source)) edgesBySource.set(edge.source, []);
+        edgesBySource.get(edge.source).push(edge);
+      }
+
+      nodeCount.textContent = String(nodes.length);
+      edgeCount.textContent = String(data.edges.length);
+
+      const types = [...new Set(data.nodes.map((node) => node.type))].sort();
+      legendEl.innerHTML = types
+        .map((type) => '<span class="chip">' + escapeHtml(type) + '</span>')
+        .join("");
+
+      if (nodes.length === 0) {
+        nodesEl.innerHTML = '<p class="empty">No nodes match this filter.</p>';
+        return;
+      }
+
+      nodesEl.innerHTML = nodes.map((node) => {
+        const outgoing = edgesBySource.get(node.id) || [];
+        const edgeHtml = outgoing.length === 0
+          ? '<div class="empty">No outgoing wikilinks.</div>'
+          : outgoing.map((edge) => '<div class="edge-item">' + escapeHtml(edge.source) + ' → ' + escapeHtml(edge.target) + '</div>').join("");
+
+        return [
+          '<article class="node">',
+          '<h3 class="node-title">' + escapeHtml(node.title) + '</h3>',
+          '<div class="node-meta">',
+          '<span>' + escapeHtml(node.type) + '</span>',
+          '<span>' + escapeHtml(node.path) + '</span>',
+          '</div>',
+          node.summary ? '<p class="node-summary">' + escapeHtml(node.summary) + '</p>' : '<p class="node-summary empty">No summary available.</p>',
+          '<div class="edge-list">',
+          edgeHtml,
+          '</div>',
+          '</article>'
+        ].join("");
+      }).join("");
+    }
+
+    async function main() {
+      try {
+        const response = await fetch("./graph.json");
+        if (!response.ok) throw new Error("Failed to load graph.json");
+        const data = await response.json();
+        render(data);
+        searchEl.addEventListener("input", () => render(data, searchEl.value));
+      } catch (error) {
+        nodesEl.innerHTML = '<p class="empty">Unable to load graph.json. Open this page via a local server or regenerate graph output.</p>';
+        console.error(error);
+      }
+    }
+
+    main();
+  </script>
+</body>
+</html>
+`;
+}
+
 function runGraph(root) {
   const wikiDir = path.join(root, "wiki");
   const graphDir = path.join(root, "graph");
@@ -280,12 +557,15 @@ function runGraph(root) {
 
   ensureDir(graphDir);
   const graphPath = path.join(graphDir, "graph.json");
+  const htmlPath = path.join(graphDir, "index.html");
   fs.writeFileSync(graphPath, `${JSON.stringify(graph, null, 2)}\n`, "utf8");
+  fs.writeFileSync(htmlPath, buildGraphHtml(), "utf8");
 
   console.log(`[graph] root: ${root}`);
   console.log(`nodes: ${graph.nodes.length}`);
   console.log(`edges: ${graph.edges.length}`);
   console.log(`output: ${relativeTo(root, graphPath)}`);
+  console.log(`viewer: ${relativeTo(root, htmlPath)}`);
 }
 
 function printPlannedAction(name, root, detail) {

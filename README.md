@@ -163,7 +163,7 @@ npm run cli -- lint --root ./my-wiki
 npm run cli -- graph --root ./my-wiki
 ```
 
-`graph` writes a portable graph export to `graph/graph.json`.
+`graph` writes a portable graph export to `graph/graph.json` and a static viewer to `graph/index.html`.
 
 Then chat with the AI:
 

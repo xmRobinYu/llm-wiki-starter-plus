@@ -163,7 +163,7 @@ npm run cli -- lint --root ./my-wiki
 npm run cli -- graph --root ./my-wiki
 ```
 
-`graph` 会把可移植图谱导出到 `graph/graph.json`。
+`graph` 会把可移植图谱导出到 `graph/graph.json`，并生成一个静态查看页 `graph/index.html`。
 
 然后与 AI 对话：
 
