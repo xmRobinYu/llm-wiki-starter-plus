@@ -66,6 +66,161 @@ function ensureWikiRoot(root) {
   }
 }
 
+function walkFiles(rootDir) {
+  if (!fs.existsSync(rootDir)) return [];
+  const results = [];
+  const stack = [rootDir];
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+    const entries = fs.readdirSync(current, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(fullPath);
+      } else {
+        results.push(fullPath);
+      }
+    }
+  }
+
+  return results.sort();
+}
+
+function toPosix(value) {
+  return value.split(path.sep).join("/");
+}
+
+function relativeTo(root, fullPath) {
+  return toPosix(path.relative(root, fullPath));
+}
+
+function parseFrontmatter(content) {
+  if (!content.startsWith("---\n")) return null;
+  const end = content.indexOf("\n---\n", 4);
+  if (end === -1) return null;
+  const block = content.slice(4, end).trim();
+  const fields = {};
+
+  for (const line of block.split("\n")) {
+    const index = line.indexOf(":");
+    if (index === -1) continue;
+    const key = line.slice(0, index).trim();
+    const value = line.slice(index + 1).trim();
+    fields[key] = value;
+  }
+
+  return fields;
+}
+
+function extractWikiLinks(content) {
+  const matches = content.match(/\[\[([^\]]+)\]\]/g) || [];
+  return matches.map((match) => match.slice(2, -2).split("|")[0].trim()).filter(Boolean);
+}
+
+function isSystemWikiPage(basename) {
+  return /^(Index|Overview|Changelog|Purpose|Wiki 目录|知识库概览|操作日志|知识库目标|sortspec)$/.test(
+    basename
+  );
+}
+
+function runLint(root) {
+  const wikiDir = path.join(root, "wiki");
+  const rawDir = path.join(root, "raw");
+  const wikiFiles = walkFiles(wikiDir).filter((file) => file.endsWith(".md"));
+  const rawFiles = walkFiles(rawDir).filter((file) => file.endsWith(".md"));
+
+  const pageRecords = wikiFiles
+    .filter((file) => path.basename(file) !== "sortspec.md")
+    .map((file) => {
+    const content = fs.readFileSync(file, "utf8");
+    const relPath = relativeTo(root, file);
+    const basename = path.basename(file, ".md");
+    return {
+      file,
+      relPath,
+      basename,
+      content,
+      frontmatter: parseFrontmatter(content),
+      links: extractWikiLinks(content)
+    };
+    });
+
+  const wikiNames = new Set(pageRecords.map((record) => record.basename));
+  const inboundCounts = new Map(pageRecords.map((record) => [record.basename, 0]));
+
+  const problems = {
+    missingFrontmatter: [],
+    missingType: [],
+    missingSummary: [],
+    deadLinks: [],
+    orphanPages: [],
+    rawCoverage: []
+  };
+
+  for (const record of pageRecords) {
+    if (!record.frontmatter && !isSystemWikiPage(record.basename)) {
+      problems.missingFrontmatter.push(record.relPath);
+    } else if (record.frontmatter) {
+      if (!record.frontmatter.type && !isSystemWikiPage(record.basename)) {
+        problems.missingType.push(record.relPath);
+      }
+      if (!record.frontmatter.summary && !isSystemWikiPage(record.basename)) {
+        problems.missingSummary.push(record.relPath);
+      }
+    }
+
+    for (const link of record.links) {
+      if (wikiNames.has(link)) {
+        inboundCounts.set(link, (inboundCounts.get(link) || 0) + 1);
+      } else if (!link.startsWith("http") && !link.endsWith("/")) {
+        problems.deadLinks.push(`${record.relPath} -> [[${link}]]`);
+      }
+    }
+  }
+
+  for (const record of pageRecords) {
+    const inbound = inboundCounts.get(record.basename) || 0;
+    if (inbound === 0 && !isSystemWikiPage(record.basename)) {
+      problems.orphanPages.push(record.relPath);
+    }
+  }
+
+  const summaryFiles = pageRecords
+    .filter((record) => record.frontmatter && record.frontmatter.type === "source")
+    .map((record) => record.basename.replace(/^Summary：/, "").replace(/^资料摘要：/, ""));
+
+  for (const rawFile of rawFiles) {
+    const rawName = path.basename(rawFile, ".md");
+    if (rawName === "sortspec") continue;
+    const matched = summaryFiles.some((name) => rawName.includes(name) || name.includes(rawName));
+    if (!matched) {
+      problems.rawCoverage.push(relativeTo(root, rawFile));
+    }
+  }
+
+  const totalProblems = Object.values(problems).reduce((count, entries) => count + entries.length, 0);
+
+  console.log(`[lint] root: ${root}`);
+  console.log(`wiki pages: ${pageRecords.length}`);
+  console.log(`raw markdown files: ${rawFiles.length}`);
+  console.log(`issues: ${totalProblems}`);
+
+  for (const [name, entries] of Object.entries(problems)) {
+    console.log(`\n${name}: ${entries.length}`);
+    for (const entry of entries.slice(0, 20)) {
+      console.log(`- ${entry}`);
+    }
+    if (entries.length > 20) {
+      console.log(`- ... ${entries.length - 20} more`);
+    }
+  }
+
+  if (totalProblems > 0) {
+    process.exitCode = 1;
+  }
+}
+
 function printPlannedAction(name, root, detail) {
   console.log(`[planned] ${name}`);
   console.log(`root: ${root}`);
@@ -109,11 +264,7 @@ switch (command) {
     break;
   }
   case "lint": {
-    printPlannedAction(
-      "lint",
-      root,
-      "next step: check frontmatter, dead links, orphan pages, and raw coverage"
-    );
+    runLint(root);
     break;
   }
   case "graph": {
