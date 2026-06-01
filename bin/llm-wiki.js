@@ -124,6 +124,85 @@ function isSystemWikiPage(basename) {
   );
 }
 
+function getReportsDir(root) {
+  return path.join(root, "wiki", isZhWikiRoot(root) ? "巡检报告" : "reports");
+}
+
+function getChangelogPath(root) {
+  return isZhWikiRoot(root)
+    ? path.join(root, "wiki", "操作日志.md")
+    : path.join(root, "wiki", "Changelog.md");
+}
+
+function timestampParts() {
+  const now = new Date();
+  const date = now.toISOString().slice(0, 10);
+  const time = [
+    String(now.getHours()).padStart(2, "0"),
+    String(now.getMinutes()).padStart(2, "0"),
+    String(now.getSeconds()).padStart(2, "0")
+  ].join("");
+  return { date, time };
+}
+
+function buildLintReport(root, pageRecords, rawFiles, problems) {
+  const zh = isZhWikiRoot(root);
+  const { date } = timestampParts();
+  const totalProblems = Object.values(problems).reduce((count, entries) => count + entries.length, 0);
+  const sections = Object.entries(problems)
+    .map(([name, entries]) => {
+      const headingMap = zh
+        ? {
+            missingFrontmatter: "缺失 Frontmatter",
+            missingType: "缺失 Type",
+            missingSummary: "缺失 Summary",
+            deadLinks: "死链",
+            orphanPages: "孤页",
+            rawCoverage: "原始资料未覆盖"
+          }
+        : {
+            missingFrontmatter: "Missing Frontmatter",
+            missingType: "Missing Type",
+            missingSummary: "Missing Summary",
+            deadLinks: "Dead Links",
+            orphanPages: "Orphan Pages",
+            rawCoverage: "Raw Coverage Gaps"
+          };
+      const sectionTitle = headingMap[name] || name;
+      const lines = entries.length === 0 ? [zh ? "- 无" : "- None"] : entries.map((entry) => `- ${entry}`);
+      return `## ${sectionTitle}\n\n${lines.join("\n")}`;
+    })
+    .join("\n\n");
+
+  const header = zh
+    ? `# 巡检报告\n\n- 日期：${date}\n- 根目录：\`${root}\`\n- wiki 页面：${pageRecords.length}\n- raw markdown 文件：${rawFiles.length}\n- 问题总数：${totalProblems}\n`
+    : `# Lint Report\n\n- Date: ${date}\n- Root: \`${root}\`\n- Wiki pages: ${pageRecords.length}\n- Raw markdown files: ${rawFiles.length}\n- Total issues: ${totalProblems}\n`;
+
+  return `${header}\n${sections}\n`;
+}
+
+function writeLintReport(root, pageRecords, rawFiles, problems) {
+  const zh = isZhWikiRoot(root);
+  const reportsDir = getReportsDir(root);
+  ensureDir(reportsDir);
+  const { date, time } = timestampParts();
+  const filename = zh ? `巡检-${date}-${time}.md` : `lint-${date}-${time}.md`;
+  const output = path.join(reportsDir, filename);
+  fs.writeFileSync(output, buildLintReport(root, pageRecords, rawFiles, problems), "utf8");
+  return output;
+}
+
+function appendLintChangelogEntry(root, totalProblems, reportPath) {
+  const zh = isZhWikiRoot(root);
+  const changelogPath = getChangelogPath(root);
+  if (!fs.existsSync(changelogPath)) return;
+  const { date } = timestampParts();
+  const entry = zh
+    ? `\n## [${date}] lint | 巡检报告\n- 问题总数：${totalProblems}\n- 报告：${reportPath}\n`
+    : `\n## [${date}] lint | Lint report\n- Total issues: ${totalProblems}\n- Report: ${reportPath}\n`;
+  fs.appendFileSync(changelogPath, entry, "utf8");
+}
+
 function runLint(root) {
   const wikiDir = path.join(root, "wiki");
   const rawDir = path.join(root, "raw");
@@ -200,11 +279,14 @@ function runLint(root) {
   }
 
   const totalProblems = Object.values(problems).reduce((count, entries) => count + entries.length, 0);
+  const reportPath = writeLintReport(root, pageRecords, rawFiles, problems);
+  appendLintChangelogEntry(root, totalProblems, relativeTo(root, reportPath));
 
   console.log(`[lint] root: ${root}`);
   console.log(`wiki pages: ${pageRecords.length}`);
   console.log(`raw markdown files: ${rawFiles.length}`);
   console.log(`issues: ${totalProblems}`);
+  console.log(`report: ${relativeTo(root, reportPath)}`);
 
   for (const [name, entries] of Object.entries(problems)) {
     console.log(`\n${name}: ${entries.length}`);

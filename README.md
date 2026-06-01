@@ -183,6 +183,8 @@ The CLI currently provides a thin command surface for future automation:
 
 `ingest` copies a local markdown file into `raw/` or fetches a URL into `raw/`, then creates a draft `source` summary page.
 
+`lint` prints issues to the terminal and also writes a markdown report to `wiki/reports/`.
+
 `query --save` writes a draft page to `wiki/queries/` so the answer can be refined inside the vault.
 
 ## Wiki Structure

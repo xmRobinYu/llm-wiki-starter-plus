@@ -183,6 +183,8 @@ CLI 目前提供一层很薄的统一命令入口，便于后续自动化：
 
 `ingest` 会把本地 markdown 文件复制到 `raw/`，或抓取 URL 内容落到 `raw/`，然后自动创建一个 `source` 资料摘要草稿页。
 
+`lint` 除了终端输出外，还会把 markdown 巡检报告写入 `wiki/巡检报告/`。
+
 `query --save` 会把一个草稿问答页写入 `wiki/问答沉淀/` 或 `wiki/queries/`，方便回到 vault 里继续完善。
 
 ## 知识库结构
