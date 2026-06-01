@@ -1,10 +1,10 @@
-# llm-wiki-starter-plus vs Original
+# llm-wiki-starter-plus vs Original llm-wiki-starter
 
 ## Summary
 
 The original `llm-wiki-starter` is primarily an installer and scaffold.
 
-This enhanced variant keeps that foundation, but adds a working local workflow layer on top:
+`llm-wiki-starter-plus` keeps that foundation, but adds a working local workflow layer on top:
 
 - stronger schema
 - richer templates
@@ -91,7 +91,7 @@ Primarily:
 - environment installer
 - template distributor
 
-### Plus
+### llm-wiki-starter-plus
 
 Now both:
 
@@ -122,7 +122,7 @@ Use the original if you only need:
 - environment setup
 - wiki scaffold generation
 
-Use `plus` if you want:
+Use `llm-wiki-starter-plus` if you want:
 
 - a scaffold plus an actual local workflow layer
 - CLI support for ingestion/query/lint/graph

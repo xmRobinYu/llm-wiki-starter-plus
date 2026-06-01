@@ -2,7 +2,9 @@
 
 ## Status
 
-This repository now has two layers:
+`llm-wiki-starter-plus` now describes the current working state of this repository.
+
+The historical published entrypoints still use `llm-wiki-starter`, but the repo itself now behaves like:
 
 1. Original scaffold / installer flow
 2. `plus` CLI and schema enhancements layered on top
@@ -91,7 +93,7 @@ The current state is a working minimum platform for local LLM Wiki workflows, no
 
 ### 3. Project Packaging
 
-- Clarify naming between original and plus variant
+- Decide whether to fully promote `llm-wiki-starter-plus` as the public repo identity
 - Decide whether CLI should remain repo-local or become a distributable package
 
 ## Constraints

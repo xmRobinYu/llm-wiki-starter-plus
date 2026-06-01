@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository now includes a thin local CLI:
+`llm-wiki-starter-plus` includes a local CLI layer on top of the original starter flow:
 
 ```bash
 llm-wiki <command>

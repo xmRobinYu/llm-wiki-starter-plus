@@ -1,6 +1,6 @@
 [English](./README.md) | 简体中文
 
-# llm-wiki-starter
+# llm-wiki-starter-plus
 
 一条命令自动搭建 [Andrej Karpathy 的 LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) AI 知识库，并额外提供一层本地 CLI 工作流，用于 `ingest`、`query`、`lint`、`graph`。
 
@@ -12,6 +12,12 @@
 
 1. **Starter 层**：安装工具、创建新的 Obsidian LLM Wiki、配置插件和主题
 2. **Workflow 层**：通过本地 `llm-wiki` CLI 执行 `ingest`、`query`、`lint`、`graph` 和 smoke test
+
+命名说明：
+
+- 对外发布的安装脚本和 Skill 入口仍沿用历史名称 `llm-wiki-starter`。
+- 当前仓库文档把增强后的工作状态统一描述为 `llm-wiki-starter-plus`。
+- 可以把它理解成“原始 starter + 本地 workflow layer”，而不是一套完全分离的新安装路径。
 
 相关文档：
 
@@ -260,7 +266,7 @@ my-wiki/
 
 ## 适合谁
 
-如果你想要的是：
+如果你想要的是 `llm-wiki-starter-plus`：
 
 - 一条命令起一个本地 Obsidian LLM Wiki
 - 一套能被多个 agent CLI 共享的 schema
@@ -268,7 +274,7 @@ my-wiki/
 
 那这个仓库现在已经同时覆盖 starter 和 workflow 两层需求。
 
-如果你只需要原始的安装器和脚手架能力，这部分仍然保留不变。
+如果你只需要原始安装器和脚手架能力，这部分仍然继续沿用 `llm-wiki-starter` 的入口保留不变。
 
 ## 致谢
 

@@ -2,7 +2,7 @@
   "name": "llm-wiki-starter-plus",
   "version": "0.1.0",
   "private": true,
-  "description": "Thin CLI scaffolding for LLM Wiki workflows",
+  "description": "Starter plus local workflow layer for Obsidian-based LLM Wiki projects",
   "bin": {
     "llm-wiki": "./bin/llm-wiki.js"
   },

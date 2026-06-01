@@ -1,6 +1,6 @@
 English | [简体中文](./README.zh-CN.md)
 
-# llm-wiki-starter
+# llm-wiki-starter-plus
 
 One command to scaffold an [Andrej Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) AI knowledge base, plus a lightweight local CLI workflow for ingest, query, lint, and graph export.
 
@@ -12,6 +12,12 @@ This repository now has two layers:
 
 1. **Starter**: install tools, scaffold a fresh Obsidian-based LLM Wiki, configure plugins and theme
 2. **Workflow layer**: run local `llm-wiki` CLI commands for `ingest`, `query`, `lint`, `graph`, and smoke tests
+
+Branding note:
+
+- The published installer and skill entrypoints still use the historical `llm-wiki-starter` name.
+- This repository-level documentation now describes the enhanced working state as `llm-wiki-starter-plus`.
+- In practice, think of it as the original starter plus a local workflow layer, not a separate fork with a different installation path.
 
 Related docs:
 
@@ -260,15 +266,15 @@ my-wiki/
 
 ## Positioning
 
-Use this repository if you want:
+Use `llm-wiki-starter-plus` if you want:
 
 - a one-command starter for a local Obsidian LLM Wiki
 - a shared schema for multiple agent CLIs
 - a lightweight local workflow layer without introducing a database or desktop app
 
-If you only need the scaffold and installer flow, that remains intact.
+If you only need the scaffold and installer flow, that remains intact under the original `llm-wiki-starter` entrypoints.
 
-If you also want working local wiki operations, this repository now includes that thin workflow layer.
+If you also want working local wiki operations, this repository now includes that workflow layer as part of `llm-wiki-starter-plus`.
 
 ## Credits
 
