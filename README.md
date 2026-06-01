@@ -21,6 +21,7 @@ Branding note:
 
 Related docs:
 
+- [docs/index.md](./docs/index.md)
 - [ROADMAP.md](./ROADMAP.md)
 - [docs/cli.md](./docs/cli.md)
 - [docs/llm-wiki-starter-plus-vs-original.md](./docs/llm-wiki-starter-plus-vs-original.md)

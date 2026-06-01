@@ -1,5 +1,12 @@
 # ROADMAP
 
+Docs navigation:
+
+- [README.md](./README.md)
+- [docs/index.md](./docs/index.md)
+- [docs/cli.md](./docs/cli.md)
+- [docs/llm-wiki-starter-plus-vs-original.md](./docs/llm-wiki-starter-plus-vs-original.md)
+
 ## Status
 
 `llm-wiki-starter-plus` now describes the current working state of this repository.

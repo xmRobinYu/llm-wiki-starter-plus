@@ -1,5 +1,12 @@
 # llm-wiki-starter-plus vs Original llm-wiki-starter
 
+Docs navigation:
+
+- [../README.md](../README.md)
+- [../ROADMAP.md](../ROADMAP.md)
+- [index.md](./index.md)
+- [cli.md](./cli.md)
+
 ## Summary
 
 The original `llm-wiki-starter` is primarily an installer and scaffold.

@@ -6,6 +6,7 @@
 - [../ROADMAP.md](../ROADMAP.md)
 - [cli.md](./cli.md)
 - [llm-wiki-starter-plus-vs-original.md](./llm-wiki-starter-plus-vs-original.md)
+- [../README.zh-CN.md](../README.zh-CN.md)
 
 These documents reflect the current repository-level positioning as `llm-wiki-starter-plus`.
 

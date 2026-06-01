@@ -1,5 +1,12 @@
 # CLI Guide
 
+Docs navigation:
+
+- [../README.md](../README.md)
+- [../ROADMAP.md](../ROADMAP.md)
+- [index.md](./index.md)
+- [llm-wiki-starter-plus-vs-original.md](./llm-wiki-starter-plus-vs-original.md)
+
 ## Overview
 
 `llm-wiki-starter-plus` includes a local CLI layer on top of the original starter flow:
