@@ -8,7 +8,8 @@
   },
   "scripts": {
     "cli": "node ./bin/llm-wiki.js",
-    "lint:cli": "node ./bin/llm-wiki.js lint"
+    "lint:cli": "node ./bin/llm-wiki.js lint",
+    "test": "bash ./scripts/smoke-cli.sh"
   },
   "engines": {
     "node": ">=18"
