@@ -228,6 +228,8 @@ The CLI provides a local command surface for future automation:
 
 Use `--top N` to limit results and `--json` for structured output.
 
+`query` now includes simple ranking reasons and evidence snippets in both terminal and JSON output.
+
 `graph` writes a portable graph export to `graph/graph.json` and a static viewer to `graph/index.html`, with type filters, a node detail panel, and a lightweight relationship layout.
 
 ## Wiki Structure

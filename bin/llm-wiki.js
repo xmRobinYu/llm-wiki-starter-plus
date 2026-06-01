@@ -1287,6 +1287,9 @@ function runGraph(root) {
 function scorePage(page, tokens) {
   const haystack = [page.title, page.type, page.path, page.summary, page.content].join(" ").toLowerCase();
   let score = 0;
+  let titleHits = 0;
+  let typeHits = 0;
+  let textHits = 0;
 
   for (const token of tokens) {
     if (!token) continue;
@@ -1294,16 +1297,28 @@ function scorePage(page, tokens) {
     const matches = haystack.match(new RegExp(escaped, "g"));
     if (matches) {
       score += matches.length;
+      textHits += matches.length;
     }
     if (page.title.toLowerCase().includes(token)) {
       score += 3;
+      titleHits += 1;
     }
     if (page.type.toLowerCase().includes(token)) {
       score += 2;
+      typeHits += 1;
     }
   }
 
-  return score;
+  const reasons = [];
+  if (titleHits > 0) reasons.push(`title:${titleHits}`);
+  if (typeHits > 0) reasons.push(`type:${typeHits}`);
+  if (textHits > 0) reasons.push(`text:${textHits}`);
+
+  return {
+    score,
+    reasons,
+    evidence: extractEvidenceSnippets(page.content, tokens, page.title)
+  };
 }
 
 function tokenizeQuestion(question) {
@@ -1344,6 +1359,28 @@ function truncateText(value, max = 140) {
   return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
 }
 
+function extractEvidenceSnippets(content, tokens, title = "") {
+  const body = stripFrontmatter(content);
+  const normalizedTitle = title.trim().toLowerCase();
+  const lines = body
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !line.startsWith("#"))
+    .filter((line) => !line.startsWith("<!--"))
+    .filter((line) => line.toLowerCase() !== normalizedTitle);
+
+  const snippets = [];
+  for (const line of lines) {
+    const normalized = line.toLowerCase();
+    if (tokens.some((token) => token && normalized.includes(token))) {
+      snippets.push(truncateText(line, 180));
+    }
+    if (snippets.length >= 3) break;
+  }
+  return snippets;
+}
+
 function saveQueryPage(root, question, rankedPages) {
   const wikiDir = path.join(root, "wiki");
   const queryDirCandidates = ["queries", "问答沉淀"];
@@ -1358,6 +1395,15 @@ function saveQueryPage(root, question, rankedPages) {
   const safeFile = `${title}.md`;
   const topPages = rankedPages.slice(0, 5);
   const relatedPages = topPages.map((page) => `  - "[[${page.title}]]"`).join("\n");
+  const topEvidence = topPages
+    .flatMap((page) =>
+      (page.evidence || []).slice(0, 2).map((snippet) => `- [[${page.title}]]: ${snippet}`)
+    )
+    .slice(0, 8)
+    .join("\n");
+  const rankingContext = topPages
+    .map((page) => `- [[${page.title}]] (${page.reasons.join(", ") || "match"})`)
+    .join("\n");
   const body = `---
 title: ${quoteYaml(title)}
 type: query
@@ -1388,11 +1434,11 @@ TBD
 
 ## Reasoning
 
-TBD
+${rankingContext || "TBD"}
 
 ## Evidence
 
-${topPages.map((page) => `- [[${page.title}]]`).join("\n") || "- TBD"}
+${topEvidence || topPages.map((page) => `- [[${page.title}]]`).join("\n") || "- TBD"}
 
 ## Decision Boundary
 
@@ -1473,7 +1519,8 @@ function runQuery(root, rawArgs) {
         summary: frontmatter?.summary || "",
         content
       };
-      return { ...page, score: scorePage(page, tokens) };
+      const ranking = scorePage(page, tokens);
+      return { ...page, score: ranking.score, reasons: ranking.reasons, evidence: ranking.evidence };
     })
     .filter((page) => page.score > 0)
     .sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
@@ -1506,8 +1553,10 @@ function runQuery(root, rawArgs) {
     title: page.title,
     type: page.type,
     score: page.score,
+    reasons: page.reasons,
     path: page.path,
-    summary: truncateText(page.summary || extractTextSummary(page.content, page.title), 160)
+    summary: truncateText(page.summary || extractTextSummary(page.content, page.title), 160),
+    evidence: page.evidence
   }));
 
   let savedPath = "";
@@ -1542,8 +1591,16 @@ function runQuery(root, rawArgs) {
   for (const page of results) {
     console.log(`- ${page.title} [${page.type}] score=${page.score}`);
     console.log(`  path: ${page.path}`);
+    if (page.reasons && page.reasons.length > 0) {
+      console.log(`  why: ${page.reasons.join(", ")}`);
+    }
     if (page.summary) {
       console.log(`  summary: ${page.summary}`);
+    }
+    if (page.evidence && page.evidence.length > 0) {
+      for (const snippet of page.evidence) {
+        console.log(`  evidence: ${snippet}`);
+      }
     }
   }
 
