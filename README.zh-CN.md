@@ -2,13 +2,37 @@
 
 # llm-wiki-starter
 
-一条命令自动搭建 [Andrej Karpathy 的 LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) AI 知识库。
+一条命令自动搭建 [Andrej Karpathy 的 LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) AI 知识库，并额外提供一层本地 CLI 工作流，用于 `ingest`、`query`、`lint`、`graph`。
 
 自动安装 Claude Code + Obsidian + 推荐的插件（Skills & Plugins & 主题 & 快捷键）等，让 AI 帮你持续积累和维护个人知识体系。
 
 自动兼容 Claude Code、Codex、Copilot、Gemini CLI、OpenCode 等主流 AI Agent 使用。
 
+这个仓库现在有两层能力：
+
+1. **Starter 层**：安装工具、创建新的 Obsidian LLM Wiki、配置插件和主题
+2. **Workflow 层**：通过本地 `llm-wiki` CLI 执行 `ingest`、`query`、`lint`、`graph` 和 smoke test
+
+相关文档：
+
+- [ROADMAP.md](./ROADMAP.md)
+- [docs/cli.md](./docs/cli.md)
+- [docs/llm-wiki-starter-plus-vs-original.md](./docs/llm-wiki-starter-plus-vs-original.md)
+
 ![ai-wiki.zh-CN](./assets/ai-wiki.zh-CN.png)
+
+## 亮点
+
+- 一条命令创建本地 LLM Wiki
+- Obsidian-first 的插件、主题、快捷键配置
+- 面向 Claude Code、Codex、Copilot、Gemini CLI、OpenCode 等的共享 schema
+- 本地 CLI 能力：
+  - `ingest`
+  - `query`
+  - `lint`
+  - `graph`
+- 带类型筛选和节点详情面板的静态图谱页
+- `npm test` 提供 smoke test 回归验证
 
 ## 安装
 
@@ -155,7 +179,15 @@ cd my-wiki && open -a Obsidian .
 claude
 ```
 
-可选的 CLI 工作流骨架：
+然后与 AI 对话：
+
+- **摄取** → `摄取这篇文章：https://example.com/some-article`
+- **查询** → `X 和 Y 之间有什么关系？`
+- **巡检** → `运行一次 wiki 巡检`
+
+## 本地 CLI
+
+仓库内 CLI 用法：
 
 ```bash
 npm run cli -- help
@@ -168,21 +200,13 @@ npm run cli -- query --root ./my-wiki --save "这个知识库适合收录什么�
 npm run cli -- query --root ./my-wiki --top 5 --json "知识库 目标 概览"
 ```
 
-运行 CLI smoke test：
+运行 smoke test：
 
 ```bash
 npm test
 ```
 
-`graph` 会把可移植图谱导出到 `graph/graph.json`，并生成一个静态查看页 `graph/index.html`，支持类型筛选和节点详情面板。
-
-然后与 AI 对话：
-
-- **摄取** → `摄取这篇文章：https://example.com/some-article`
-- **查询** → `X 和 Y 之间有什么关系？`
-- **巡检** → `运行一次 wiki 巡检`
-
-CLI 目前提供一层很薄的统一命令入口，便于后续自动化：
+CLI 现在提供一层本地命令面，便于后续自动化：
 
 - `llm-wiki ingest`
 - `llm-wiki query`
@@ -196,6 +220,8 @@ CLI 目前提供一层很薄的统一命令入口，便于后续自动化：
 `query --save` 会把一个草稿问答页写入 `wiki/问答沉淀/` 或 `wiki/queries/`，方便回到 vault 里继续完善。
 
 可用 `--top N` 控制结果数量，用 `--json` 输出结构化结果。
+
+`graph` 会把可移植图谱导出到 `graph/graph.json`，并生成一个静态查看页 `graph/index.html`，支持类型筛选和节点详情面板。
 
 ## 知识库结构
 
@@ -231,6 +257,18 @@ my-wiki/
 **三层架构**：`raw/`（不可变源文档）→ `wiki/`（LLM 维护的页面）→ Schema（`AGENTS.md`）
 
 **三大操作**：**Ingest**（摄取）→ **Query**（查询）→ **Lint**（巡检）
+
+## 适合谁
+
+如果你想要的是：
+
+- 一条命令起一个本地 Obsidian LLM Wiki
+- 一套能被多个 agent CLI 共享的 schema
+- 一层轻量、本地、markdown-first 的工作流能力
+
+那这个仓库现在已经同时覆盖 starter 和 workflow 两层需求。
+
+如果你只需要原始的安装器和脚手架能力，这部分仍然保留不变。
 
 ## 致谢
 

@@ -2,13 +2,37 @@ English | [简体中文](./README.zh-CN.md)
 
 # llm-wiki-starter
 
-One command to scaffold an [Andrej Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) AI knowledge base.
+One command to scaffold an [Andrej Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) AI knowledge base, plus a lightweight local CLI workflow for ingest, query, lint, and graph export.
 
 Auto-installs Claude Code + Obsidian + recommended plugins (Skills & Plugins & Theme & Shortcuts), so AI can continuously build and maintain your personal knowledge system.
 
 Compatible with Claude Code, Codex, Copilot, Gemini CLI, OpenCode, and other mainstream AI agents out of the box.
 
+This repository now has two layers:
+
+1. **Starter**: install tools, scaffold a fresh Obsidian-based LLM Wiki, configure plugins and theme
+2. **Workflow layer**: run local `llm-wiki` CLI commands for `ingest`, `query`, `lint`, `graph`, and smoke tests
+
+Related docs:
+
+- [ROADMAP.md](./ROADMAP.md)
+- [docs/cli.md](./docs/cli.md)
+- [docs/llm-wiki-starter-plus-vs-original.md](./docs/llm-wiki-starter-plus-vs-original.md)
+
 ![ai-wiki](./assets/ai-wiki.png)
+
+## Highlights
+
+- One-command local LLM Wiki scaffold
+- Obsidian-first setup with plugins, theme, and shortcuts
+- Shared schema for Claude Code, Codex, Copilot, Gemini CLI, OpenCode, and others
+- Local CLI for:
+  - `ingest`
+  - `query`
+  - `lint`
+  - `graph`
+- Static graph viewer with type filters and node detail panel
+- Smoke test coverage via `npm test`
 
 ## Installation
 
@@ -155,7 +179,15 @@ cd my-wiki && open -a Obsidian .
 claude
 ```
 
-Optional CLI workflow scaffold:
+Then chat with the AI:
+
+- **Ingest** → `Ingest this article: https://example.com/some-article`
+- **Query** → `What is the relationship between X and Y?`
+- **Lint** → `Run a health check on the wiki`
+
+## Local CLI
+
+Repo-local CLI usage:
 
 ```bash
 npm run cli -- help
@@ -168,21 +200,13 @@ npm run cli -- query --root ./my-wiki --save "What belongs in this wiki?"
 npm run cli -- query --root ./my-wiki --top 5 --json "purpose index overview"
 ```
 
-Run the CLI smoke test suite:
+Smoke test:
 
 ```bash
 npm test
 ```
 
-`graph` writes a portable graph export to `graph/graph.json` and a static viewer to `graph/index.html`, with type filters and a node detail panel.
-
-Then chat with the AI:
-
-- **Ingest** → `Ingest this article: https://example.com/some-article`
-- **Query** → `What is the relationship between X and Y?`
-- **Lint** → `Run a health check on the wiki`
-
-The CLI currently provides a thin command surface for future automation:
+The CLI provides a local command surface for future automation:
 
 - `llm-wiki ingest`
 - `llm-wiki query`
@@ -196,6 +220,8 @@ The CLI currently provides a thin command surface for future automation:
 `query --save` writes a draft page to `wiki/queries/` so the answer can be refined inside the vault.
 
 Use `--top N` to limit results and `--json` for structured output.
+
+`graph` writes a portable graph export to `graph/graph.json` and a static viewer to `graph/index.html`, with type filters and a node detail panel.
 
 ## Wiki Structure
 
@@ -231,6 +257,18 @@ my-wiki/
 **Three-layer architecture**: `raw/` (immutable sources) → `wiki/` (LLM-maintained pages) → Schema (`AGENTS.md`)
 
 **Three operations**: **Ingest** (add knowledge) → **Query** (ask questions) → **Lint** (health check)
+
+## Positioning
+
+Use this repository if you want:
+
+- a one-command starter for a local Obsidian LLM Wiki
+- a shared schema for multiple agent CLIs
+- a lightweight local workflow layer without introducing a database or desktop app
+
+If you only need the scaffold and installer flow, that remains intact.
+
+If you also want working local wiki operations, this repository now includes that thin workflow layer.
 
 ## Credits
 
