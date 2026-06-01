@@ -17,6 +17,8 @@ Three-layer structure:
 2. **`wiki/`** — LLM-generated and maintained markdown pages. The LLM fully owns this layer.
 3. **This file (`AGENTS.md`)** — Schema specification. Defines structure, conventions, and workflows.
 
+Prefer a small number of durable, well-linked pages over a large number of shallow, repetitive pages.
+
 ## Directory Structure
 
 ```
@@ -30,11 +32,14 @@ Three-layer structure:
 │   ├── concepts/               # Concept pages (cross-domain knowledge axis)
 │   ├── summaries/              # One summary per ingested raw file
 │   ├── synthesis/              # Cross-cutting analysis and insights
+│   ├── queries/                # High-value Q&A pages worth preserving
 │   ├── archived/               # Deprecated pages
+│   ├── reports/                # Lint / coverage / contradiction reports
 │   ├── assets/excalidraw/      # Excalidraw diagrams
 │   ├── Index.md                # Content index (LLM-maintained)
 │   ├── Changelog.md            # Operation timeline log
 │   └── Overview.md             # Wiki landing page
+├── graph/                      # Portable graph exports (derived artifacts)
 ├── canvas/                     # JSON Canvas visual maps
 ├── templates/                  # Page templates (one per type, used by LLM)
 ├── CLAUDE.md                   # Claude Code schema (imports this file)
@@ -53,14 +58,17 @@ Every wiki page must include this frontmatter:
 ```yaml
 ---
 title: Page Title
-type: entity | concept | topic | comparison | source | synthesis
+type: entity | concept | topic | comparison | source | synthesis | query
+status: draft | stable | archived
 tags: [tag1, tag2, tag3]
 aliases: [alt-name-1, alt-name-2]     # Optional, for Obsidian search/linking
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 sources:
   - "[[Summary：source-name]]"         # Always use wikilink format
+domain: ""                             # Optional, preferred for topic/entity/source pages
 confidence: high | medium | low
+summary: ""                            # One-sentence description for quick scanning
 related_concepts: []                   # Optional, concept pages only
 source_url: https://...                # Optional, source pages only
 media: article | paper | video         # Optional, source pages only
@@ -79,6 +87,7 @@ When creating a wiki page, **read `templates/<type>.md` first** to get the match
 | comparison | `templates/comparison.md` | Comparative analysis |
 | source | `templates/source.md` | Source material summaries |
 | synthesis | `templates/synthesis.md` | Cross-cutting analysis & insights |
+| query | `templates/query.md` | Reusable answers to concrete user questions |
 
 ### Page Naming
 
@@ -93,6 +102,24 @@ When creating a wiki page, **read `templates/<type>.md` first** to get the match
 - `confidence: high` when backed by `raw/` sources; `confidence: medium` when based on training knowledge alone
 - If a detailed domain page already exists, keep the concept page as a concise definition + link — don't duplicate content
 - All concept pages must include the `concept` tag
+
+## Page Creation Rules
+
+- **Update before creating**: if an existing page can absorb the new information cleanly, update it instead of creating a new page.
+- **`source`**: every formally ingested raw document should map to exactly one summary page in `wiki/summaries/`.
+- **`entity`**: create only when a person, product, organization, tool, protocol, or project becomes a reusable reference point across multiple pages.
+- **`concept`**: create only for stable, reusable concepts; avoid pages for one-off buzzwords or transient phrasing.
+- **`topic`**: create when a cluster of sources, entities, and concepts forms a broad subject that benefits from a guide-style page.
+- **`comparison`**: create when the user is deciding between alternatives or when the wiki repeatedly encounters the same choice boundary.
+- **`synthesis`**: create only when multiple sources together justify a new thesis, framework, or insight.
+- **`query`**: create when a concrete question and answer will likely be useful again; do not save trivial or one-off exchanges.
+
+## Page Relationship Rules
+
+- `raw/` stores immutable originals.
+- `wiki/summaries/` stores one-page summaries of raw sources.
+- All other wiki pages are compiled knowledge and should cite summary pages rather than duplicating raw content.
+- Pages should link bidirectionally when the relationship is materially useful to navigation or reasoning.
 
 ## Tag System
 
@@ -193,6 +220,7 @@ When the user asks a question:
 2. **Read** relevant wiki pages (not raw materials — the wiki is compiled knowledge).
 3. **Synthesize** an answer with `[[page]]` citations.
 4. **If the answer has substantial value**, suggest saving it as a new wiki page (comparison, synthesis, etc.).
+   - If the question is concrete and likely to recur, prefer saving it as a `query` page in `wiki/queries/`.
 5. **If the wiki lacks relevant information**, state this clearly — then check raw materials or suggest sources to ingest.
 6. **Append** to `wiki/Changelog.md`:
     ```
@@ -213,7 +241,8 @@ When the user requests a health check (or run periodically):
 6. **Tag violations** — Tags not in the controlled vocabulary, duplicates, untagged pages.
 7. **Resource coverage** — Raw materials not yet ingested.
 8. **Concept coverage** — Concepts frequently mentioned in domain pages but missing from `wiki/concepts/`.
-9. **Append** results to `wiki/Changelog.md`.
+9. **Quality checks** — Pages missing summary/frontmatter, comparison pages without decision guidance, synthesis pages without a clear thesis.
+10. **Write a detailed report** to `wiki/reports/` when findings are non-trivial, then append a short summary to `wiki/Changelog.md`.
 
 ## Obsidian Integration
 

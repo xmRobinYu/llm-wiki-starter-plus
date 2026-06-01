@@ -15,6 +15,8 @@
 2. **`wiki/`** — LLM 生成和维护的 markdown 页面。LLM 完全拥有这一层。
 3. **本文件（`AGENTS.md`）** — Schema 规范。定义结构、约定和工作流。
 
+优先维护少量稳定、互相链接良好的页面，而不是大量浅层、重复的页面。
+
 ## 目录结构
 
 ```
@@ -28,11 +30,14 @@
 │   ├── 概念/                   # 概念页（跨领域知识轴）
 │   ├── 资料摘要/               # 每份已摄取资料的摘要页
 │   ├── 综合分析/               # 交叉分析与洞察
+│   ├── 问答沉淀/               # 值得长期保留的高价值问答
 │   ├── 归档/                   # 已归档的过时页面
+│   ├── 巡检报告/               # 巡检、覆盖率、矛盾报告
 │   ├── assets/excalidraw/      # Excalidraw 图表
 │   ├── Wiki 目录.md            # 内容目录（LLM 维护）
 │   ├── 操作日志.md             # 时间线操作日志
 │   └── 知识库概览.md           # 知识库落地页
+├── graph/                      # 可移植图谱导出（派生产物）
 ├── canvas/                     # JSON Canvas 可视化地图
 ├── templates/                  # 页面模板（每种 type 一个，LLM 创建页面时引用）
 ├── CLAUDE.md                   # Claude Code Schema（导入本文件）
@@ -51,14 +56,17 @@
 ```yaml
 ---
 title: 页面标题
-type: entity | concept | topic | comparison | source | synthesis
+type: entity | concept | topic | comparison | source | synthesis | query
+status: draft | stable | archived
 tags: [tag1, tag2, tag3]
 aliases: [别名1, 别名2]           # 可选，Obsidian 别名
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 sources:
   - "[[资料摘要：xxx]]"            # 使用 wikilink 格式，确保可点击
+domain: ""                        # 可选，建议 topic/entity/source 使用
 confidence: high | medium | low
+summary: ""                       # 便于快速扫读的一句话摘要
 related_concepts: []               # 可选，concept 类型页面使用
 source_url: https://...            # 可选，仅 source 类型页面
 media: article | paper | video     # 可选，仅 source 类型页面
@@ -77,6 +85,7 @@ media: article | paper | video     # 可选，仅 source 类型页面
 | comparison | `templates/comparison.md` | 对比分析 |
 | source | `templates/source.md` | 资料摘要 |
 | synthesis | `templates/synthesis.md` | 交叉分析与洞察 |
+| query | `templates/query.md` | 可复用的具体问题回答 |
 
 ### 页面命名
 
@@ -91,6 +100,24 @@ media: article | paper | video     # 可选，仅 source 类型页面
 - 有 `raw/` 资料支撑的标 `confidence: high`，纯基于训练知识的标 `confidence: medium`
 - 已有领域详解页的概念，概念页做精简定义 + 链接到领域详解页，不重复内容
 - 所有概念页必须包含 `概念` 标签
+
+## 页面创建规则
+
+- **优先更新后新建**：如果已有页面能自然吸收新信息，优先更新，而不是创建重复页面。
+- **`source`**：每个正式摄取的 raw 文档，都应在 `wiki/资料摘要/` 中对应且仅对应一个摘要页。
+- **`entity`**：只有当人物、产品、组织、工具、协议或项目在多个页面中反复出现并值得复用引用时才创建。
+- **`concept`**：只为稳定、可复用的概念建页；避免为一次性流行语或临时措辞建页。
+- **`topic`**：当多个来源、实体、概念围绕一个较大主题形成知识簇时创建。
+- **`comparison`**：当用户在做选择，或知识库里反复出现同一决策边界时创建。
+- **`synthesis`**：仅当多个来源共同支持一个新论点、框架或洞察时创建。
+- **`query`**：当一个具体问答后续大概率还会复用时创建；不要保存琐碎的一次性交流。
+
+## 页面关系规则
+
+- `raw/` 保存不可变原文。
+- `wiki/资料摘要/` 保存每个原始资料的一页摘要。
+- 其他 wiki 页面属于编译后的知识层，应优先引用资料摘要页，而不是重复搬运原文。
+- 当页面关系对导航或推理有实际价值时，应建立双向链接。
 
 ## 标签体系
 
@@ -191,6 +218,7 @@ media: article | paper | video     # 可选，仅 source 类型页面
 2. **阅读**相关 wiki 页面（不是原始资料 — wiki 是编译后的知识）。
 3. **综合回答**并附 `[[page]]` 引用。
 4. **若回答有实质价值**，建议保存为新 wiki 页面（对比、综合等）。
+   - 如果问题具体、后续大概率再次出现，优先保存为 `wiki/问答沉淀/` 下的 `query` 页面。
 5. **若 wiki 缺少相关信息**，明确说明 — 然后检查原始资料或建议需要摄取的来源。
 6. **追加**到 `wiki/操作日志.md`：
     ```
@@ -211,7 +239,8 @@ media: article | paper | video     # 可选，仅 source 类型页面
 6. **标签规范** — 不在词汇表中的标签、重复标签、未打标签的页面。
 7. **资料覆盖** — 尚未摄取的 raw 资料。
 8. **概念覆盖** — 领域页多次提及但 `wiki/概念/` 中缺少独立页面的概念。
-9. **追加**检查结果到 `wiki/操作日志.md`。
+9. **质量检查** — 缺少摘要/frontmatter 的页面、没有决策边界的 comparison 页面、没有明确 thesis 的 synthesis 页面。
+10. **详细报告** 写入 `wiki/巡检报告/`，并将简要摘要追加到 `wiki/操作日志.md`。
 
 ## Obsidian 集成
 
