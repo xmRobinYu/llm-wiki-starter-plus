@@ -1428,6 +1428,28 @@ function truncateText(value, max = 140) {
   return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
 }
 
+function dedupeAndRankEvidence(items, limit = 4) {
+  const priority = { summary: 0, link: 1, body: 2 };
+  const normalized = new Set();
+  const ranked = items
+    .filter((item) => item && item.kind && item.text)
+    .sort((a, b) => {
+      const byKind = (priority[a.kind] ?? 99) - (priority[b.kind] ?? 99);
+      if (byKind !== 0) return byKind;
+      return b.text.length - a.text.length;
+    });
+
+  const result = [];
+  for (const item of ranked) {
+    const key = `${item.kind}:${item.text.toLowerCase().replace(/\s+/g, " ").trim()}`;
+    if (normalized.has(key)) continue;
+    normalized.add(key);
+    result.push(item);
+    if (result.length >= limit) break;
+  }
+  return result;
+}
+
 function extractEvidenceSnippets(page, tokens) {
   const normalizedTitle = page.title.trim().toLowerCase();
   const lines = stripFrontmatter(page.content)
@@ -1440,23 +1462,23 @@ function extractEvidenceSnippets(page, tokens) {
 
   const snippets = [];
   if (page.summary && tokens.some((token) => page.summary.toLowerCase().includes(token))) {
-    snippets.push(`summary: ${truncateText(page.summary, 180)}`);
+    snippets.push({ kind: "summary", text: truncateText(page.summary, 180) });
   }
   for (const link of page.links || []) {
     const normalized = link.toLowerCase();
     if (tokens.some((token) => token && normalized.includes(token))) {
-      snippets.push(`link: [[${link}]]`);
+      snippets.push({ kind: "link", text: `[[${link}]]` });
     }
-    if (snippets.length >= 4) return snippets;
+    if (snippets.length >= 8) break;
   }
   for (const line of lines) {
     const normalized = line.toLowerCase();
     if (tokens.some((token) => token && normalized.includes(token))) {
-      snippets.push(`body: ${truncateText(line, 180)}`);
+      snippets.push({ kind: "body", text: truncateText(line, 180) });
     }
-    if (snippets.length >= 4) break;
+    if (snippets.length >= 12) break;
   }
-  return snippets;
+  return dedupeAndRankEvidence(snippets, 4).map((item) => `${item.kind}: ${item.text}`);
 }
 
 function saveQueryPage(root, question, rankedPages) {
@@ -1473,11 +1495,16 @@ function saveQueryPage(root, question, rankedPages) {
   const safeFile = `${title}.md`;
   const topPages = rankedPages.slice(0, 5);
   const relatedPages = topPages.map((page) => `  - "[[${page.title}]]"`).join("\n");
-  const topEvidence = topPages
-    .flatMap((page) =>
-      (page.evidence || []).slice(0, 2).map((snippet) => `- [[${page.title}]]: ${snippet}`)
-    )
-    .slice(0, 8)
+  const topEvidence = dedupeAndRankEvidence(
+    topPages.flatMap((page) =>
+      (page.evidence || []).slice(0, 3).map((snippet) => ({
+        kind: snippet.split(":")[0] || "body",
+        text: `[[${page.title}]]: ${snippet}`
+      }))
+    ),
+    8
+  )
+    .map((item) => `- ${item.text}`)
     .join("\n");
   const rankingContext = topPages
     .map((page) => `- [[${page.title}]] (${page.reasons.join(", ") || "match"})`)
