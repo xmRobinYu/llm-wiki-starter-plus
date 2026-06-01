@@ -38,6 +38,7 @@ Prefer a small number of durable, well-linked pages over a large number of shall
 │   ├── assets/excalidraw/      # Excalidraw diagrams
 │   ├── Index.md                # Content index (LLM-maintained)
 │   ├── Changelog.md            # Operation timeline log
+│   ├── Purpose.md              # Scope, audience, and collection boundaries
 │   └── Overview.md             # Wiki landing page
 ├── graph/                      # Portable graph exports (derived artifacts)
 ├── canvas/                     # JSON Canvas visual maps
@@ -106,6 +107,7 @@ When creating a wiki page, **read `templates/<type>.md` first** to get the match
 ## Page Creation Rules
 
 - **Update before creating**: if an existing page can absorb the new information cleanly, update it instead of creating a new page.
+- **Read `wiki/Purpose.md` first** when deciding whether something belongs in this wiki, how detailed it should be, and which tradeoffs matter most.
 - **`source`**: every formally ingested raw document should map to exactly one summary page in `wiki/summaries/`.
 - **`entity`**: create only when a person, product, organization, tool, protocol, or project becomes a reusable reference point across multiple pages.
 - **`concept`**: create only for stable, reusable concepts; avoid pages for one-off buzzwords or transient phrasing.
