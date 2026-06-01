@@ -165,6 +165,7 @@ npm run cli -- ingest --root ./my-wiki --domain research ./notes/article.md
 npm run cli -- lint --root ./my-wiki
 npm run cli -- graph --root ./my-wiki
 npm run cli -- query --root ./my-wiki --save "What belongs in this wiki?"
+npm run cli -- query --root ./my-wiki --top 5 --json "purpose index overview"
 ```
 
 `graph` writes a portable graph export to `graph/graph.json` and a static viewer to `graph/index.html`.
@@ -187,6 +188,8 @@ The CLI currently provides a thin command surface for future automation:
 `lint` prints issues to the terminal and also writes a markdown report to `wiki/reports/`.
 
 `query --save` writes a draft page to `wiki/queries/` so the answer can be refined inside the vault.
+
+Use `--top N` to limit results and `--json` for structured output.
 
 ## Wiki Structure
 

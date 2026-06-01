@@ -165,6 +165,7 @@ npm run cli -- ingest --root ./my-wiki --domain 研究 ./notes/article.md
 npm run cli -- lint --root ./my-wiki
 npm run cli -- graph --root ./my-wiki
 npm run cli -- query --root ./my-wiki --save "这个知识库适合收录什么？"
+npm run cli -- query --root ./my-wiki --top 5 --json "知识库 目标 概览"
 ```
 
 `graph` 会把可移植图谱导出到 `graph/graph.json`，并生成一个静态查看页 `graph/index.html`。
@@ -187,6 +188,8 @@ CLI 目前提供一层很薄的统一命令入口，便于后续自动化：
 `lint` 除了终端输出外，还会把 markdown 巡检报告写入 `wiki/巡检报告/`。
 
 `query --save` 会把一个草稿问答页写入 `wiki/问答沉淀/` 或 `wiki/queries/`，方便回到 vault 里继续完善。
+
+可用 `--top N` 控制结果数量，用 `--json` 输出结构化结果。
 
 ## 知识库结构
 

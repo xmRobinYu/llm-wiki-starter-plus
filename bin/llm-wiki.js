@@ -414,11 +414,16 @@ function extractMarkdownSummary(content) {
 
 function extractTextSummary(content, title = "") {
   const normalizedTitle = title.trim().toLowerCase();
-  const paragraphs = content
+  const body = stripFrontmatter(content);
+  const paragraphs = body
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean)
-    .filter((line) => !line.startsWith("#"));
+    .filter((line) => !line.startsWith("#"))
+    .filter((line) => !line.startsWith(">"))
+    .filter((line) => !line.startsWith("<!--"))
+    .filter((line) => !/^[a-z_]+:\s/i.test(line))
+    .filter((line) => !/^\w+\s*:\s*\[.*\]$/.test(line));
 
   for (const paragraph of paragraphs) {
     if (normalizedTitle && paragraph.toLowerCase() === normalizedTitle) continue;
@@ -1092,6 +1097,11 @@ function quoteYaml(value) {
   return `"${String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
 
+function truncateText(value, max = 140) {
+  if (!value) return "";
+  return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
+}
+
 function saveQueryPage(root, question, rankedPages) {
   const wikiDir = path.join(root, "wiki");
   const queryDirCandidates = ["queries", "问答沉淀"];
@@ -1170,12 +1180,29 @@ function findIndexPage(root) {
 
 function runQuery(root, rawArgs) {
   let save = false;
+  let json = false;
+  let top = 10;
   const rest = [];
 
   for (let i = 0; i < rawArgs.length; i += 1) {
     const arg = rawArgs[i];
     if (arg === "--save") {
       save = true;
+      continue;
+    }
+    if (arg === "--json") {
+      json = true;
+      continue;
+    }
+    if (arg === "--top") {
+      const next = rawArgs[i + 1];
+      if (!next) fail("missing value for --top");
+      const parsed = Number.parseInt(next, 10);
+      if (!Number.isInteger(parsed) || parsed <= 0) {
+        fail("--top must be a positive integer");
+      }
+      top = parsed;
+      i += 1;
       continue;
     }
     rest.push(arg);
@@ -1210,26 +1237,76 @@ function runQuery(root, rawArgs) {
     .sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
 
   console.log(`[query] root: ${root}`);
-  console.log(`question: ${question}`);
-  console.log(`matches: ${rankedPages.length}`);
-
   if (rankedPages.length === 0) {
-    console.log("\nNo matching wiki pages found.");
+    if (json) {
+      console.log(
+        JSON.stringify(
+          {
+            root,
+            question,
+            totalMatches: 0,
+            results: []
+          },
+          null,
+          2
+        )
+      );
+    } else {
+      console.log(`question: ${question}`);
+      console.log("matches: 0");
+      console.log("\nNo matching wiki pages found.");
+    }
     process.exitCode = 1;
     return;
   }
 
+  const results = rankedPages.slice(0, top).map((page) => ({
+    title: page.title,
+    type: page.type,
+    score: page.score,
+    path: page.path,
+    summary: truncateText(page.summary || extractTextSummary(page.content, page.title), 160)
+  }));
+
+  let savedPath = "";
+  if (save) {
+    const output = saveQueryPage(root, question, rankedPages);
+    savedPath = relativeTo(root, output);
+  }
+
+  if (json) {
+    console.log(
+      JSON.stringify(
+        {
+          root,
+          question,
+          totalMatches: rankedPages.length,
+          top,
+          savedPath: savedPath || null,
+          results
+        },
+        null,
+        2
+      )
+    );
+    return;
+  }
+
+  console.log(`question: ${question}`);
+  console.log(`matches: ${rankedPages.length}`);
+  console.log(`showing: ${results.length}`);
+
   console.log("\nTop matches:");
-  for (const page of rankedPages.slice(0, 10)) {
-    console.log(`- ${page.title} [${page.type}] score=${page.score} path=${page.path}`);
+  for (const page of results) {
+    console.log(`- ${page.title} [${page.type}] score=${page.score}`);
+    console.log(`  path: ${page.path}`);
     if (page.summary) {
       console.log(`  summary: ${page.summary}`);
     }
   }
 
-  if (save) {
-    const output = saveQueryPage(root, question, rankedPages);
-    console.log(`\nsaved: ${relativeTo(root, output)}`);
+  if (savedPath) {
+    console.log(`\nsaved: ${savedPath}`);
   }
 }
 
