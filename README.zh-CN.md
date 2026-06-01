@@ -161,6 +161,7 @@ claude
 npm run cli -- help
 npm run cli -- lint --root ./my-wiki
 npm run cli -- graph --root ./my-wiki
+npm run cli -- query --root ./my-wiki --save "这个知识库适合收录什么？"
 ```
 
 `graph` 会把可移植图谱导出到 `graph/graph.json`，并生成一个静态查看页 `graph/index.html`。
@@ -177,6 +178,8 @@ CLI 目前提供一层很薄的统一命令入口，便于后续自动化：
 - `llm-wiki query`
 - `llm-wiki lint`
 - `llm-wiki graph`
+
+`query --save` 会把一个草稿问答页写入 `wiki/问答沉淀/` 或 `wiki/queries/`，方便回到 vault 里继续完善。
 
 ## 知识库结构
 

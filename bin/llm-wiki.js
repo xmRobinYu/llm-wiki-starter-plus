@@ -568,6 +568,202 @@ function runGraph(root) {
   console.log(`viewer: ${relativeTo(root, htmlPath)}`);
 }
 
+function scorePage(page, tokens) {
+  const haystack = [page.title, page.type, page.path, page.summary, page.content].join(" ").toLowerCase();
+  let score = 0;
+
+  for (const token of tokens) {
+    if (!token) continue;
+    const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const matches = haystack.match(new RegExp(escaped, "g"));
+    if (matches) {
+      score += matches.length;
+    }
+    if (page.title.toLowerCase().includes(token)) {
+      score += 3;
+    }
+    if (page.type.toLowerCase().includes(token)) {
+      score += 2;
+    }
+  }
+
+  return score;
+}
+
+function tokenizeQuestion(question) {
+  const baseTokens = (question.toLowerCase().match(/[\p{L}\p{N}]+/gu) || []).filter(Boolean);
+  const tokens = new Set(baseTokens);
+  const hasHan = /[\p{Script=Han}]/u;
+
+  for (const token of baseTokens) {
+    if (!hasHan.test(token)) continue;
+    if (token.length < 2) continue;
+    for (let size = 2; size <= 3; size += 1) {
+      if (token.length < size) continue;
+      for (let i = 0; i <= token.length - size; i += 1) {
+        tokens.add(token.slice(i, i + size));
+      }
+    }
+  }
+
+  return [...tokens];
+}
+
+function sanitizeTitleFragment(value) {
+  return value
+    .replace(/[\p{P}\p{S}]+/gu, "-")
+    .replace(/\s+/g, " ")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .trim()
+    .slice(0, 80) || "query";
+}
+
+function quoteYaml(value) {
+  return `"${String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+function saveQueryPage(root, question, rankedPages) {
+  const wikiDir = path.join(root, "wiki");
+  const queryDirCandidates = ["queries", "问答沉淀"];
+  const existingDir = queryDirCandidates.find((name) => fs.existsSync(path.join(wikiDir, name)));
+  const isZhWiki = fs.existsSync(path.join(wikiDir, "Wiki 目录.md"));
+  const queryDir = path.join(wikiDir, existingDir || (isZhWiki ? "问答沉淀" : "queries"));
+  ensureDir(queryDir);
+
+  const now = new Date().toISOString().slice(0, 10);
+  const titlePrefix = isZhWiki ? "问答" : "Query";
+  const title = `${titlePrefix}：${sanitizeTitleFragment(question)}`;
+  const safeFile = `${title}.md`;
+  const topPages = rankedPages.slice(0, 5);
+  const relatedPages = topPages.map((page) => `  - "[[${page.title}]]"`).join("\n");
+  const body = `---
+title: ${quoteYaml(title)}
+type: query
+status: draft
+tags: []
+aliases: []
+created: ${now}
+updated: ${now}
+sources: []
+domain: ""
+confidence: low
+summary: ""
+question: ${quoteYaml(question)}
+answer_status: partial
+related_pages:
+${relatedPages || "  - \"\""}
+---
+
+> Draft query page created from CLI search results.
+
+## Question
+
+${question}
+
+## Short Answer
+
+TBD
+
+## Reasoning
+
+TBD
+
+## Evidence
+
+${topPages.map((page) => `- [[${page.title}]]`).join("\n") || "- TBD"}
+
+## Decision Boundary
+
+TBD
+
+## Follow-up Questions
+
+- TBD
+
+## Related
+
+- [[${path.basename(findIndexPage(root), ".md")}]]
+`;
+
+  const output = path.join(queryDir, safeFile);
+  fs.writeFileSync(output, body, "utf8");
+  return output;
+}
+
+function findIndexPage(root) {
+  const candidates = [
+    path.join(root, "wiki", "Index.md"),
+    path.join(root, "wiki", "Wiki 目录.md")
+  ];
+  return candidates.find((candidate) => fs.existsSync(candidate)) || candidates[0];
+}
+
+function runQuery(root, rawArgs) {
+  let save = false;
+  const rest = [];
+
+  for (let i = 0; i < rawArgs.length; i += 1) {
+    const arg = rawArgs[i];
+    if (arg === "--save") {
+      save = true;
+      continue;
+    }
+    rest.push(arg);
+  }
+
+  const question = rest.join(" ").trim();
+  if (!question) {
+    fail("query requires a question string");
+  }
+
+  const wikiDir = path.join(root, "wiki");
+  const wikiFiles = walkFiles(wikiDir)
+    .filter((file) => file.endsWith(".md"))
+    .filter((file) => path.basename(file) !== "sortspec.md");
+  const tokens = tokenizeQuestion(question);
+
+  const rankedPages = wikiFiles
+    .map((file) => {
+      const content = fs.readFileSync(file, "utf8");
+      const basename = path.basename(file, ".md");
+      const frontmatter = parseFrontmatter(content);
+      const page = {
+        title: basename,
+        type: frontmatter?.type || (isSystemWikiPage(basename) ? "system" : "unknown"),
+        path: relativeTo(root, file),
+        summary: frontmatter?.summary || "",
+        content
+      };
+      return { ...page, score: scorePage(page, tokens) };
+    })
+    .filter((page) => page.score > 0)
+    .sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
+
+  console.log(`[query] root: ${root}`);
+  console.log(`question: ${question}`);
+  console.log(`matches: ${rankedPages.length}`);
+
+  if (rankedPages.length === 0) {
+    console.log("\nNo matching wiki pages found.");
+    process.exitCode = 1;
+    return;
+  }
+
+  console.log("\nTop matches:");
+  for (const page of rankedPages.slice(0, 10)) {
+    console.log(`- ${page.title} [${page.type}] score=${page.score} path=${page.path}`);
+    if (page.summary) {
+      console.log(`  summary: ${page.summary}`);
+    }
+  }
+
+  if (save) {
+    const output = saveQueryPage(root, question, rankedPages);
+    console.log(`\nsaved: ${relativeTo(root, output)}`);
+  }
+}
+
 function printPlannedAction(name, root, detail) {
   console.log(`[planned] ${name}`);
   console.log(`root: ${root}`);
@@ -599,15 +795,7 @@ switch (command) {
     break;
   }
   case "query": {
-    const question = rest.join(" ").trim();
-    if (!question) {
-      fail("query requires a question string");
-    }
-    printPlannedAction(
-      "query",
-      root,
-      `next step: resolve relevant wiki pages and optionally persist a query page\nquestion: ${question}`
-    );
+    runQuery(root, rest);
     break;
   }
   case "lint": {

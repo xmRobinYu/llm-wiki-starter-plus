@@ -161,6 +161,7 @@ Optional CLI workflow scaffold:
 npm run cli -- help
 npm run cli -- lint --root ./my-wiki
 npm run cli -- graph --root ./my-wiki
+npm run cli -- query --root ./my-wiki --save "What belongs in this wiki?"
 ```
 
 `graph` writes a portable graph export to `graph/graph.json` and a static viewer to `graph/index.html`.
@@ -177,6 +178,8 @@ The CLI currently provides a thin command surface for future automation:
 - `llm-wiki query`
 - `llm-wiki lint`
 - `llm-wiki graph`
+
+`query --save` writes a draft page to `wiki/queries/` so the answer can be refined inside the vault.
 
 ## Wiki Structure
 
