@@ -159,6 +159,8 @@ claude
 
 ```bash
 npm run cli -- help
+npm run cli -- ingest --root ./my-wiki ./notes/article.md
+npm run cli -- ingest --root ./my-wiki "https://example.com"
 npm run cli -- lint --root ./my-wiki
 npm run cli -- graph --root ./my-wiki
 npm run cli -- query --root ./my-wiki --save "这个知识库适合收录什么？"
@@ -178,6 +180,8 @@ CLI 目前提供一层很薄的统一命令入口，便于后续自动化：
 - `llm-wiki query`
 - `llm-wiki lint`
 - `llm-wiki graph`
+
+`ingest` 会把本地 markdown 文件复制到 `raw/`，或抓取 URL 内容落到 `raw/`，然后自动创建一个 `source` 资料摘要草稿页。
 
 `query --save` 会把一个草稿问答页写入 `wiki/问答沉淀/` 或 `wiki/queries/`，方便回到 vault 里继续完善。
 
