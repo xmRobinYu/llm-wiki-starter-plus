@@ -168,7 +168,7 @@ npm run cli -- query --root ./my-wiki --save "这个知识库适合收录什么�
 npm run cli -- query --root ./my-wiki --top 5 --json "知识库 目标 概览"
 ```
 
-`graph` 会把可移植图谱导出到 `graph/graph.json`，并生成一个静态查看页 `graph/index.html`。
+`graph` 会把可移植图谱导出到 `graph/graph.json`，并生成一个静态查看页 `graph/index.html`，支持类型筛选和节点详情面板。
 
 然后与 AI 对话：
 

@@ -739,7 +739,7 @@ function buildGraphHtml() {
     }
     .layout {
       display: grid;
-      grid-template-columns: 320px 1fr;
+      grid-template-columns: 300px minmax(0, 1fr) 320px;
       gap: 16px;
       padding: 16px 24px 24px;
     }
@@ -811,6 +811,12 @@ function buildGraphHtml() {
       color: var(--accent);
       font-size: 12px;
       border: 1px solid rgba(13, 107, 95, 0.15);
+      cursor: pointer;
+      user-select: none;
+    }
+    .chip.active {
+      background: var(--accent);
+      color: #fff;
     }
     .list {
       display: grid;
@@ -824,6 +830,17 @@ function buildGraphHtml() {
       border-radius: 14px;
       padding: 14px;
       background: #fff;
+      cursor: pointer;
+      transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+    }
+    .node:hover {
+      transform: translateY(-1px);
+      border-color: #b8aa92;
+      box-shadow: 0 8px 24px rgba(31, 27, 22, 0.08);
+    }
+    .node.active {
+      border-color: var(--accent);
+      box-shadow: 0 10px 28px rgba(13, 107, 95, 0.12);
     }
     .node-title {
       font-size: 18px;
@@ -852,6 +869,41 @@ function buildGraphHtml() {
       font-size: 13px;
       color: var(--muted);
       padding: 4px 0;
+    }
+    .detail-title {
+      margin: 0 0 10px;
+      font-size: 24px;
+      line-height: 1.2;
+    }
+    .detail-meta {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 16px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .detail-block {
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px dashed var(--line);
+    }
+    .detail-block h3 {
+      margin: 0 0 10px;
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .detail-link {
+      display: block;
+      padding: 6px 0;
+      color: var(--ink);
+      text-decoration: none;
+      font-size: 14px;
+    }
+    .detail-link code {
+      color: var(--muted);
+      font-size: 12px;
     }
     .empty {
       color: var(--muted);
@@ -893,6 +945,12 @@ function buildGraphHtml() {
         <div id="nodes" class="list"></div>
       </div>
     </section>
+    <section class="panel">
+      <h2>Details</h2>
+      <div class="panel-body">
+        <div id="details" class="empty">Select a node to inspect its summary and linked relationships.</div>
+      </div>
+    </section>
   </main>
   <script>
     const nodeCount = document.getElementById("nodeCount");
@@ -900,6 +958,9 @@ function buildGraphHtml() {
     const nodesEl = document.getElementById("nodes");
     const legendEl = document.getElementById("legend");
     const searchEl = document.getElementById("search");
+    const detailsEl = document.getElementById("details");
+    let activeType = "all";
+    let activeNodeId = "";
 
     function escapeHtml(value) {
       return String(value)
@@ -908,12 +969,55 @@ function buildGraphHtml() {
         .replaceAll(">", "&gt;");
     }
 
+    function renderDetails(data, node) {
+      if (!node) {
+        detailsEl.innerHTML = '<p class="empty">Select a node to inspect its summary and linked relationships.</p>';
+        return;
+      }
+
+      const outgoing = data.edges.filter((edge) => edge.source === node.id);
+      const incoming = data.edges.filter((edge) => edge.target === node.id);
+      const nodeMap = new Map(data.nodes.map((entry) => [entry.id, entry]));
+      const renderLinks = (edges, direction) => {
+        if (edges.length === 0) {
+          return '<p class="empty">None.</p>';
+        }
+        return edges.map((edge) => {
+          const otherId = direction === "out" ? edge.target : edge.source;
+          const other = nodeMap.get(otherId);
+          if (!other) return "";
+          return '<a class="detail-link" href="#" data-node-id="' + escapeHtml(other.id) + '">' +
+            escapeHtml(other.title) +
+            '<br /><code>' + escapeHtml(other.path) + '</code></a>';
+        }).join("");
+      };
+
+      detailsEl.innerHTML = [
+        '<h3 class="detail-title">' + escapeHtml(node.title) + '</h3>',
+        '<div class="detail-meta">',
+        '<div><strong>Type:</strong> ' + escapeHtml(node.type) + '</div>',
+        '<div><strong>Path:</strong> <code>' + escapeHtml(node.path) + '</code></div>',
+        '</div>',
+        node.summary ? '<p>' + escapeHtml(node.summary) + '</p>' : '<p class="empty">No summary available.</p>',
+        '<div class="detail-block"><h3>Outgoing Links</h3>' + renderLinks(outgoing, "out") + '</div>',
+        '<div class="detail-block"><h3>Incoming Links</h3>' + renderLinks(incoming, "in") + '</div>'
+      ].join("");
+
+      detailsEl.querySelectorAll("[data-node-id]").forEach((link) => {
+        link.addEventListener("click", (event) => {
+          event.preventDefault();
+          activeNodeId = link.getAttribute("data-node-id") || "";
+          render(data, searchEl.value);
+        });
+      });
+    }
+
     function render(data, query = "") {
       const normalized = query.trim().toLowerCase();
       const nodes = data.nodes.filter((node) => {
         if (!normalized) return true;
         return [node.title, node.type, node.path, node.summary].join(" ").toLowerCase().includes(normalized);
-      });
+      }).filter((node) => activeType === "all" ? true : node.type === activeType);
 
       const edgesBySource = new Map();
       for (const edge of data.edges) {
@@ -925,14 +1029,28 @@ function buildGraphHtml() {
       edgeCount.textContent = String(data.edges.length);
 
       const types = [...new Set(data.nodes.map((node) => node.type))].sort();
-      legendEl.innerHTML = types
-        .map((type) => '<span class="chip">' + escapeHtml(type) + '</span>')
+      const typeOptions = ["all", ...types];
+      legendEl.innerHTML = typeOptions
+        .map((type) => '<span class="chip' + (activeType === type ? ' active' : '') + '" data-type="' + escapeHtml(type) + '">' + escapeHtml(type) + '</span>')
         .join("");
+      legendEl.querySelectorAll("[data-type]").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          activeType = chip.getAttribute("data-type") || "all";
+          if (activeNodeId && !data.nodes.find((node) => node.id === activeNodeId && (activeType === "all" || node.type === activeType))) {
+            activeNodeId = "";
+          }
+          render(data, searchEl.value);
+        });
+      });
 
       if (nodes.length === 0) {
         nodesEl.innerHTML = '<p class="empty">No nodes match this filter.</p>';
+        renderDetails(data, null);
         return;
       }
+
+      const activeNode = nodes.find((node) => node.id === activeNodeId) || nodes[0];
+      activeNodeId = activeNode.id;
 
       nodesEl.innerHTML = nodes.map((node) => {
         const outgoing = edgesBySource.get(node.id) || [];
@@ -941,7 +1059,7 @@ function buildGraphHtml() {
           : outgoing.map((edge) => '<div class="edge-item">' + escapeHtml(edge.source) + ' → ' + escapeHtml(edge.target) + '</div>').join("");
 
         return [
-          '<article class="node">',
+          '<article class="node' + (node.id === activeNodeId ? ' active' : '') + '" data-node-id="' + escapeHtml(node.id) + '">',
           '<h3 class="node-title">' + escapeHtml(node.title) + '</h3>',
           '<div class="node-meta">',
           '<span>' + escapeHtml(node.type) + '</span>',
@@ -954,6 +1072,15 @@ function buildGraphHtml() {
           '</article>'
         ].join("");
       }).join("");
+
+      nodesEl.querySelectorAll("[data-node-id]").forEach((item) => {
+        item.addEventListener("click", () => {
+          activeNodeId = item.getAttribute("data-node-id") || "";
+          render(data, searchEl.value);
+        });
+      });
+
+      renderDetails(data, activeNode);
     }
 
     async function main() {

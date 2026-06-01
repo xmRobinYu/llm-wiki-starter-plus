@@ -168,7 +168,7 @@ npm run cli -- query --root ./my-wiki --save "What belongs in this wiki?"
 npm run cli -- query --root ./my-wiki --top 5 --json "purpose index overview"
 ```
 
-`graph` writes a portable graph export to `graph/graph.json` and a static viewer to `graph/index.html`.
+`graph` writes a portable graph export to `graph/graph.json` and a static viewer to `graph/index.html`, with type filters and a node detail panel.
 
 Then chat with the AI:
 
