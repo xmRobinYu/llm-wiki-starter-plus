@@ -1,5 +1,9 @@
 # llm-wiki-starter Skill 设计文档
 
+> Status: historical design draft.
+> This document captures the original design thinking for the `llm-wiki-starter` skill and install path.
+> The current repository-level branding is now described as `llm-wiki-starter-plus`, but this file intentionally preserves the historical implementation context and command names from that period.
+
 ## Context
 
 `llm-wiki-starter` 仓库当前提供一条 `curl | bash install.sh` 命令一键创建 Andrej Karpathy 风格的 LLM Wiki 知识库。该路径在 macOS / Linux / Git Bash + WSL2 工作良好，但**不能跨过"必须有 bash 环境"这道坎**——Windows cmd / PowerShell 用户跑不动；脚本 OS 分支也无法覆盖所有发行版（zypper / apk / 边缘 Linux）；脚本需要随 OS / 包管理器演化持续维护降级链。

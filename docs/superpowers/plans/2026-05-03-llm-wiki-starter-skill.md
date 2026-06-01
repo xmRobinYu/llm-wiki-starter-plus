@@ -1,5 +1,9 @@
 # llm-wiki-starter Skill Implementation Plan
 
+> Status: historical implementation plan.
+> This plan reflects the original `llm-wiki-starter` skill rollout work.
+> The current repository-level branding is now described as `llm-wiki-starter-plus`, but this plan intentionally keeps the original task framing, paths, and command names because it documents historical implementation work rather than the current public positioning.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a Skill named `llm-wiki-starter` that guides any AI Agent (Claude Code / Codex / Copilot CLI / Gemini CLI / OpenCode) to scaffold an LLM Wiki knowledge base, alongside the existing `install.sh` one-shot path. Extract the 17-plugin list into a shared `plugin-manifest.json` so both paths stay in sync.
