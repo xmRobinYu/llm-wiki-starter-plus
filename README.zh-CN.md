@@ -228,7 +228,7 @@ CLI 现在提供一层本地命令面，便于后续自动化：
 
 可用 `--top N` 控制结果数量，用 `--json` 输出结构化结果。
 
-`query` 现在会在终端和 JSON 输出里附带简单的排序原因与 evidence 片段。
+`query` 现在会在终端和 JSON 输出里附带 `title`、`type`、`summary`、`body`、`link` 等命中类型，以及 evidence 片段。
 
 `graph` 会把可移植图谱导出到 `graph/graph.json`，并生成一个静态查看页 `graph/index.html`，支持类型筛选、type 着色、节点详情面板和轻量关系布局。
 

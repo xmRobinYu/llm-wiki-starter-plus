@@ -1324,25 +1324,53 @@ function runGraph(root) {
 }
 
 function scorePage(page, tokens) {
-  const haystack = [page.title, page.type, page.path, page.summary, page.content].join(" ").toLowerCase();
   let score = 0;
   let titleHits = 0;
   let typeHits = 0;
-  let textHits = 0;
+  let summaryHits = 0;
+  let bodyHits = 0;
+  let linkHits = 0;
+  const titleText = page.title.toLowerCase();
+  const typeText = page.type.toLowerCase();
+  const summaryText = (page.summary || "").toLowerCase();
+  const linkText = (page.links || []).join(" ").toLowerCase();
+  const bodyText = stripFrontmatter(page.content).toLowerCase();
 
   for (const token of tokens) {
     if (!token) continue;
     const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const matches = haystack.match(new RegExp(escaped, "g"));
-    if (matches) {
-      score += matches.length;
-      textHits += matches.length;
+    const titleMatches = titleText.match(new RegExp(escaped, "g"));
+    const typeMatches = typeText.match(new RegExp(escaped, "g"));
+    const summaryMatches = summaryText.match(new RegExp(escaped, "g"));
+    const linkMatches = linkText.match(new RegExp(escaped, "g"));
+    const bodyMatches = bodyText.match(new RegExp(escaped, "g"));
+
+    if (titleMatches) {
+      titleHits += titleMatches.length;
+      score += titleMatches.length * 4;
     }
-    if (page.title.toLowerCase().includes(token)) {
+    if (typeMatches) {
+      typeHits += typeMatches.length;
+      score += typeMatches.length * 3;
+    }
+    if (summaryMatches) {
+      summaryHits += summaryMatches.length;
+      score += summaryMatches.length * 2;
+    }
+    if (linkMatches) {
+      linkHits += linkMatches.length;
+      score += linkMatches.length * 2;
+    }
+    if (bodyMatches) {
+      bodyHits += bodyMatches.length;
+      score += bodyMatches.length;
+    }
+
+    if (titleText.includes(token)) {
       score += 3;
       titleHits += 1;
     }
-    if (page.type.toLowerCase().includes(token)) {
+    if (typeText.includes(token)) {
       score += 2;
       typeHits += 1;
     }
@@ -1351,12 +1379,14 @@ function scorePage(page, tokens) {
   const reasons = [];
   if (titleHits > 0) reasons.push(`title:${titleHits}`);
   if (typeHits > 0) reasons.push(`type:${typeHits}`);
-  if (textHits > 0) reasons.push(`text:${textHits}`);
+  if (summaryHits > 0) reasons.push(`summary:${summaryHits}`);
+  if (linkHits > 0) reasons.push(`link:${linkHits}`);
+  if (bodyHits > 0) reasons.push(`body:${bodyHits}`);
 
   return {
     score,
     reasons,
-    evidence: extractEvidenceSnippets(page.content, tokens, page.title)
+    evidence: extractEvidenceSnippets(page, tokens)
   };
 }
 
@@ -1398,10 +1428,9 @@ function truncateText(value, max = 140) {
   return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
 }
 
-function extractEvidenceSnippets(content, tokens, title = "") {
-  const body = stripFrontmatter(content);
-  const normalizedTitle = title.trim().toLowerCase();
-  const lines = body
+function extractEvidenceSnippets(page, tokens) {
+  const normalizedTitle = page.title.trim().toLowerCase();
+  const lines = stripFrontmatter(page.content)
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean)
@@ -1410,12 +1439,22 @@ function extractEvidenceSnippets(content, tokens, title = "") {
     .filter((line) => line.toLowerCase() !== normalizedTitle);
 
   const snippets = [];
+  if (page.summary && tokens.some((token) => page.summary.toLowerCase().includes(token))) {
+    snippets.push(`summary: ${truncateText(page.summary, 180)}`);
+  }
+  for (const link of page.links || []) {
+    const normalized = link.toLowerCase();
+    if (tokens.some((token) => token && normalized.includes(token))) {
+      snippets.push(`link: [[${link}]]`);
+    }
+    if (snippets.length >= 4) return snippets;
+  }
   for (const line of lines) {
     const normalized = line.toLowerCase();
     if (tokens.some((token) => token && normalized.includes(token))) {
-      snippets.push(truncateText(line, 180));
+      snippets.push(`body: ${truncateText(line, 180)}`);
     }
-    if (snippets.length >= 3) break;
+    if (snippets.length >= 4) break;
   }
   return snippets;
 }
@@ -1556,7 +1595,8 @@ function runQuery(root, rawArgs) {
         type: frontmatter?.type || (isSystemWikiPage(basename) ? "system" : "unknown"),
         path: relativeTo(root, file),
         summary: frontmatter?.summary || "",
-        content
+        content,
+        links: extractWikiLinks(content)
       };
       const ranking = scorePage(page, tokens);
       return { ...page, score: ranking.score, reasons: ranking.reasons, evidence: ranking.evidence };
