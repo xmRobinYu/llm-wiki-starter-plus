@@ -38,7 +38,7 @@ Related docs:
   - `query`
   - `lint`
   - `graph`
-- Static graph viewer with type filters and node detail panel
+- Static graph viewer with type filters, a node detail panel, and a lightweight relationship layout
 - Smoke test coverage via `npm test`
 
 ## Installation
@@ -228,7 +228,7 @@ The CLI provides a local command surface for future automation:
 
 Use `--top N` to limit results and `--json` for structured output.
 
-`graph` writes a portable graph export to `graph/graph.json` and a static viewer to `graph/index.html`, with type filters and a node detail panel.
+`graph` writes a portable graph export to `graph/graph.json` and a static viewer to `graph/index.html`, with type filters, a node detail panel, and a lightweight relationship layout.
 
 ## Wiki Structure
 

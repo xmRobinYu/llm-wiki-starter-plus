@@ -743,6 +743,10 @@ function buildGraphHtml() {
       gap: 16px;
       padding: 16px 24px 24px;
     }
+    .stack {
+      display: grid;
+      gap: 16px;
+    }
     .panel {
       background: var(--panel);
       border: 1px solid var(--line);
@@ -905,6 +909,46 @@ function buildGraphHtml() {
       color: var(--muted);
       font-size: 12px;
     }
+    .graph-frame {
+      width: 100%;
+      height: 440px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background:
+        radial-gradient(circle at 50% 50%, rgba(13, 107, 95, 0.04) 0%, rgba(13, 107, 95, 0) 62%),
+        linear-gradient(180deg, #fffefb 0%, #f6f1e7 100%);
+      overflow: hidden;
+    }
+    .graph-svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .graph-edge {
+      stroke: rgba(31, 27, 22, 0.22);
+      stroke-width: 1.4;
+    }
+    .graph-edge.active {
+      stroke: rgba(13, 107, 95, 0.6);
+      stroke-width: 2.2;
+    }
+    .graph-node {
+      fill: #fff;
+      stroke: rgba(31, 27, 22, 0.18);
+      stroke-width: 1.6;
+      cursor: pointer;
+      transition: stroke 120ms ease, stroke-width 120ms ease, fill 120ms ease;
+    }
+    .graph-node.active {
+      fill: #d9eee9;
+      stroke: var(--accent);
+      stroke-width: 3;
+    }
+    .graph-label {
+      font-size: 11px;
+      fill: var(--ink);
+      pointer-events: none;
+    }
     .empty {
       color: var(--muted);
       font-style: italic;
@@ -939,12 +983,22 @@ function buildGraphHtml() {
         <div class="legend" id="legend"></div>
       </div>
     </section>
-    <section class="panel">
-      <h2>Nodes</h2>
-      <div class="panel-body">
-        <div id="nodes" class="list"></div>
-      </div>
-    </section>
+    <div class="stack">
+      <section class="panel">
+        <h2>Graph View</h2>
+        <div class="panel-body">
+          <div class="graph-frame">
+            <svg id="graphSvg" class="graph-svg" viewBox="0 0 720 440" preserveAspectRatio="xMidYMid meet"></svg>
+          </div>
+        </div>
+      </section>
+      <section class="panel">
+        <h2>Nodes</h2>
+        <div class="panel-body">
+          <div id="nodes" class="list"></div>
+        </div>
+      </section>
+    </div>
     <section class="panel">
       <h2>Details</h2>
       <div class="panel-body">
@@ -959,6 +1013,7 @@ function buildGraphHtml() {
     const legendEl = document.getElementById("legend");
     const searchEl = document.getElementById("search");
     const detailsEl = document.getElementById("details");
+    const graphSvg = document.getElementById("graphSvg");
     let activeType = "all";
     let activeNodeId = "";
 
@@ -1012,6 +1067,64 @@ function buildGraphHtml() {
       });
     }
 
+    function renderGraph(data, nodes) {
+      if (nodes.length === 0) {
+        graphSvg.innerHTML = "";
+        return;
+      }
+
+      const width = 720;
+      const height = 440;
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const radius = Math.min(width, height) * 0.34;
+      const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+      const positioned = nodes.map((node, index) => {
+        const angle = (Math.PI * 2 * index) / nodes.length - Math.PI / 2;
+        return {
+          ...node,
+          x: centerX + Math.cos(angle) * radius,
+          y: centerY + Math.sin(angle) * radius
+        };
+      });
+      const positionedMap = new Map(positioned.map((node) => [node.id, node]));
+      const activeConnections = new Set();
+      for (const edge of data.edges) {
+        if (edge.source === activeNodeId || edge.target === activeNodeId) {
+          activeConnections.add(edge.source + "=>" + edge.target);
+        }
+      }
+
+      const edges = data.edges
+        .filter((edge) => positionedMap.has(edge.source) && positionedMap.has(edge.target))
+        .map((edge) => {
+          const source = positionedMap.get(edge.source);
+          const target = positionedMap.get(edge.target);
+          const active = activeConnections.has(edge.source + "=>" + edge.target);
+          return '<line class="graph-edge' + (active ? ' active' : '') + '" x1="' + source.x + '" y1="' + source.y + '" x2="' + target.x + '" y2="' + target.y + '"></line>';
+        })
+        .join("");
+
+      const circles = positioned.map((node) => {
+        const active = node.id === activeNodeId;
+        const labelY = node.y + (node.y < centerY ? -18 : 22);
+        return [
+          '<g data-graph-node="' + escapeHtml(node.id) + '">',
+          '<circle class="graph-node' + (active ? ' active' : '') + '" cx="' + node.x + '" cy="' + node.y + '" r="' + (active ? 11 : 9) + '"></circle>',
+          '<text class="graph-label" x="' + node.x + '" y="' + labelY + '" text-anchor="middle">' + escapeHtml(node.title.length > 18 ? node.title.slice(0, 18) + '…' : node.title) + '</text>',
+          '</g>'
+        ].join("");
+      }).join("");
+
+      graphSvg.innerHTML = edges + circles;
+      graphSvg.querySelectorAll("[data-graph-node]").forEach((group) => {
+        group.addEventListener("click", () => {
+          activeNodeId = group.getAttribute("data-graph-node") || "";
+          render(data, searchEl.value);
+        });
+      });
+    }
+
     function render(data, query = "") {
       const normalized = query.trim().toLowerCase();
       const nodes = data.nodes.filter((node) => {
@@ -1045,6 +1158,7 @@ function buildGraphHtml() {
 
       if (nodes.length === 0) {
         nodesEl.innerHTML = '<p class="empty">No nodes match this filter.</p>';
+        renderGraph(data, []);
         renderDetails(data, null);
         return;
       }
@@ -1080,6 +1194,7 @@ function buildGraphHtml() {
         });
       });
 
+      renderGraph(data, nodes);
       renderDetails(data, activeNode);
     }
 
