@@ -38,7 +38,7 @@
   - `query`
   - `lint`
   - `graph`
-- 带类型筛选、节点详情面板和轻量关系布局的静态图谱页
+- 带类型筛选、type 着色、节点详情面板和轻量关系布局的静态图谱页
 - `npm test` 提供 smoke test 回归验证
 
 ## 安装
@@ -230,7 +230,7 @@ CLI 现在提供一层本地命令面，便于后续自动化：
 
 `query` 现在会在终端和 JSON 输出里附带简单的排序原因与 evidence 片段。
 
-`graph` 会把可移植图谱导出到 `graph/graph.json`，并生成一个静态查看页 `graph/index.html`，支持类型筛选、节点详情面板和轻量关系布局。
+`graph` 会把可移植图谱导出到 `graph/graph.json`，并生成一个静态查看页 `graph/index.html`，支持类型筛选、type 着色、节点详情面板和轻量关系布局。
 
 ## 知识库结构
 

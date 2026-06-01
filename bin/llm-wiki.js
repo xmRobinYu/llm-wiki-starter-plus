@@ -817,10 +817,22 @@ function buildGraphHtml() {
       border: 1px solid rgba(13, 107, 95, 0.15);
       cursor: pointer;
       user-select: none;
+      position: relative;
+    }
+    .chip::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--chip-color, var(--accent));
+      box-shadow: 0 0 0 1px rgba(31, 27, 22, 0.08);
     }
     .chip.active {
       background: var(--accent);
       color: #fff;
+    }
+    .chip.active::before {
+      background: #fff;
     }
     .list {
       display: grid;
@@ -831,6 +843,7 @@ function buildGraphHtml() {
     }
     .node {
       border: 1px solid var(--line);
+      border-left: 6px solid var(--node-color, var(--accent));
       border-radius: 14px;
       padding: 14px;
       background: #fff;
@@ -933,8 +946,8 @@ function buildGraphHtml() {
       stroke-width: 2.2;
     }
     .graph-node {
-      fill: #fff;
-      stroke: rgba(31, 27, 22, 0.18);
+      fill: var(--node-fill, #fff);
+      stroke: var(--node-stroke, rgba(31, 27, 22, 0.18));
       stroke-width: 1.6;
       cursor: pointer;
       transition: stroke 120ms ease, stroke-width 120ms ease, fill 120ms ease;
@@ -1016,6 +1029,31 @@ function buildGraphHtml() {
     const graphSvg = document.getElementById("graphSvg");
     let activeType = "all";
     let activeNodeId = "";
+
+    function colorForType(type) {
+      const palette = {
+        all: "#0d6b5f",
+        system: "#8c7b68",
+        source: "#0d6b5f",
+        concept: "#d66a3d",
+        entity: "#2a6fbb",
+        topic: "#8f5bd1",
+        comparison: "#b24c63",
+        synthesis: "#2c8a57",
+        query: "#c18b1f",
+        unknown: "#6d6254"
+      };
+      return palette[type] || "#6d6254";
+    }
+
+    function fadedColor(hex, alpha = 0.16) {
+      const value = hex.replace("#", "");
+      if (value.length !== 6) return "rgba(13, 107, 95, " + alpha + ")";
+      const r = Number.parseInt(value.slice(0, 2), 16);
+      const g = Number.parseInt(value.slice(2, 4), 16);
+      const b = Number.parseInt(value.slice(4, 6), 16);
+      return "rgba(" + r + ", " + g + ", " + b + ", " + alpha + ")";
+    }
 
     function escapeHtml(value) {
       return String(value)
@@ -1108,9 +1146,10 @@ function buildGraphHtml() {
       const circles = positioned.map((node) => {
         const active = node.id === activeNodeId;
         const labelY = node.y + (node.y < centerY ? -18 : 22);
+        const color = colorForType(node.type);
         return [
           '<g data-graph-node="' + escapeHtml(node.id) + '">',
-          '<circle class="graph-node' + (active ? ' active' : '') + '" cx="' + node.x + '" cy="' + node.y + '" r="' + (active ? 11 : 9) + '"></circle>',
+          '<circle class="graph-node' + (active ? ' active' : '') + '" style="--node-fill:' + fadedColor(color, active ? 0.28 : 0.16) + ';--node-stroke:' + color + ';" cx="' + node.x + '" cy="' + node.y + '" r="' + (active ? 11 : 9) + '"></circle>',
           '<text class="graph-label" x="' + node.x + '" y="' + labelY + '" text-anchor="middle">' + escapeHtml(node.title.length > 18 ? node.title.slice(0, 18) + '…' : node.title) + '</text>',
           '</g>'
         ].join("");
@@ -1144,7 +1183,7 @@ function buildGraphHtml() {
       const types = [...new Set(data.nodes.map((node) => node.type))].sort();
       const typeOptions = ["all", ...types];
       legendEl.innerHTML = typeOptions
-        .map((type) => '<span class="chip' + (activeType === type ? ' active' : '') + '" data-type="' + escapeHtml(type) + '">' + escapeHtml(type) + '</span>')
+        .map((type) => '<span class="chip' + (activeType === type ? ' active' : '') + '" data-type="' + escapeHtml(type) + '" style="--chip-color:' + colorForType(type) + ';">' + escapeHtml(type) + '</span>')
         .join("");
       legendEl.querySelectorAll("[data-type]").forEach((chip) => {
         chip.addEventListener("click", () => {
@@ -1173,7 +1212,7 @@ function buildGraphHtml() {
           : outgoing.map((edge) => '<div class="edge-item">' + escapeHtml(edge.source) + ' → ' + escapeHtml(edge.target) + '</div>').join("");
 
         return [
-          '<article class="node' + (node.id === activeNodeId ? ' active' : '') + '" data-node-id="' + escapeHtml(node.id) + '">',
+          '<article class="node' + (node.id === activeNodeId ? ' active' : '') + '" data-node-id="' + escapeHtml(node.id) + '" style="--node-color:' + colorForType(node.type) + ';">',
           '<h3 class="node-title">' + escapeHtml(node.title) + '</h3>',
           '<div class="node-meta">',
           '<span>' + escapeHtml(node.type) + '</span>',
