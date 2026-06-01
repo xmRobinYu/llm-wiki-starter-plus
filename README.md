@@ -155,11 +155,26 @@ cd my-wiki && open -a Obsidian .
 claude
 ```
 
+Optional CLI workflow scaffold:
+
+```bash
+npm run cli -- help
+npm run cli -- lint --root ./my-wiki
+npm run cli -- graph --root ./my-wiki
+```
+
 Then chat with the AI:
 
 - **Ingest** → `Ingest this article: https://example.com/some-article`
 - **Query** → `What is the relationship between X and Y?`
 - **Lint** → `Run a health check on the wiki`
+
+The CLI currently provides a thin command surface for future automation:
+
+- `llm-wiki ingest`
+- `llm-wiki query`
+- `llm-wiki lint`
+- `llm-wiki graph`
 
 ## Wiki Structure
 

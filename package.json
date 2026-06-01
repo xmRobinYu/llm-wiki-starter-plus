@@ -1,0 +1,16 @@
+{
+  "name": "llm-wiki-starter-plus",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Thin CLI scaffolding for LLM Wiki workflows",
+  "bin": {
+    "llm-wiki": "./bin/llm-wiki.js"
+  },
+  "scripts": {
+    "cli": "node ./bin/llm-wiki.js",
+    "lint:cli": "node ./bin/llm-wiki.js lint"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

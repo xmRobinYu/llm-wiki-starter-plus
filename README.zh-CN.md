@@ -155,11 +155,26 @@ cd my-wiki && open -a Obsidian .
 claude
 ```
 
+可选的 CLI 工作流骨架：
+
+```bash
+npm run cli -- help
+npm run cli -- lint --root ./my-wiki
+npm run cli -- graph --root ./my-wiki
+```
+
 然后与 AI 对话：
 
 - **摄取** → `摄取这篇文章：https://example.com/some-article`
 - **查询** → `X 和 Y 之间有什么关系？`
 - **巡检** → `运行一次 wiki 巡检`
+
+CLI 目前提供一层很薄的统一命令入口，便于后续自动化：
+
+- `llm-wiki ingest`
+- `llm-wiki query`
+- `llm-wiki lint`
+- `llm-wiki graph`
 
 ## 知识库结构
 
