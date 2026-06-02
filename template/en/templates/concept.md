@@ -1,16 +1,22 @@
 ---
 title: 
-type: concept
+kind: concept
+layer: canonical
+domains: []
+status: draft
 tags: [concept]
 aliases: []
 created: 
 updated: 
 sources: []
-related_concepts: []
+stability: evergreen
+bloom: understand
+review_cycle: quarterly
 confidence: medium
+summary: ""
 ---
 
-> One-sentence authoritative definition (≤50 words)
+> One-sentence authoritative definition (≤50 words).
 
 ## What It Is
 
@@ -22,7 +28,7 @@ confidence: medium
 
 ## Common Misconceptions
 
-## vs. Adjacent Concepts
+## Distinctions from Related Concepts
 
 ## Related
 

@@ -213,47 +213,84 @@ npm run cli -- query --root ./my-wiki --top 5 --json "知识库 目标 概览"
 npm test
 ```
 
-CLI 现在提供一层本地命令面，便于后续自动化：
+CLI 提供一层本地命令面，便于后续自动化：
 
 - `llm-wiki ingest`
 - `llm-wiki query`
 - `llm-wiki lint`
 - `llm-wiki graph`
 
-`ingest` 会把本地 markdown 文件复制到 `raw/`，或抓取 URL 内容落到 `raw/`，然后自动创建一个 `source` 资料摘要草稿页。可用 `--domain <名称>` 指定原始资料子目录，并把该领域写入 source metadata。
+`ingest` 会把本地 markdown 文件复制到 `raw/`，或抓取 URL 内容落到 `raw/`，然后自动创建：
+- 一个 `source` 资料摘要草稿页，位于 `wiki/30 证据/资料摘要/`
+- 1-3 个 atom 草稿，位于 `wiki/20 领域/<领域>/工作台/原子卡/`
+- source 页上的候选链接与晋升建议
 
-`lint` 除了终端输出外，还会把 markdown 巡检报告写入 `wiki/巡检报告/`。
+可用 `--domain <名称>` 指定原始资料子目录，并把该领域写入 source metadata。
 
-`query --save` 会把一个草稿问答页写入 `wiki/问答沉淀/` 或 `wiki/queries/`，方便回到 vault 里继续完善。
+`lint` 除了终端输出外，还会把 markdown 巡检报告写入 `wiki/00 系统/巡检报告/`。它会检查：
+- `raw -> source` 覆盖
+- `source -> atom/stable` 编译完成度
+- 孤立 atom、缺失领域地图、缺失系统页、缺失决策边界
+
+`query --save` 会把草稿问答页写入 `wiki/40 问答/`，方便回到 vault 里继续完善。
 
 可用 `--top N` 控制结果数量，用 `--json` 输出结构化结果。
 
-`query` 现在会在终端和 JSON 输出里附带 `title`、`type`、`summary`、`body`、`link` 等命中类型，以及去重后的 evidence 片段。
+`query --json` 向 stdout 只输出一个 JSON 对象，顶层字段稳定为 `root`、`question`、`totalMatches`、`top`、`savedPath`、`results`。
 
-`graph` 会把可移植图谱导出到 `graph/graph.json`，并生成一个静态查看页 `graph/index.html`，支持类型筛选、type 着色、节点详情面板和轻量关系布局。
+只有在使用 `--save` 时，`savedPath` 才会是实际路径；否则固定为 `null`。
+
+每条查询结果包含：
+- `title`、`kind`、`layer`、`domains`、`score`、`path`、`summary`、`evidence`
+- 结构化的 `why` 数组，用于解释排名原因
+
+查询评分是层级感知的：`canonical` (1.5x)、`domain` (1.2x)、`reusable` (1.1x)、`navigation` (0.9x)、`working` (0.6x)、`evidence` (0.3x)。对于来源追溯型查询（含"来源"、"出处"、"证据"等词），证据层会被提升到 2.0x。
+
+`graph` 会把可移植图谱导出到 `graph/graph.json`，并生成静态查看页 `graph/index.html`，支持 kind/layer 筛选、层级着色、节点详情面板和轻量关系布局。
 
 ## 知识库结构
 
+新脚手架采用**分层知识架构**，包含六个逻辑层级：
+
 ```
 my-wiki/
-├── raw/                     # 不可变的源文档（LLM 只读）
+├── raw/                     # 不可变源文档（LLM 只读，本地优先）
 │   ├── 收件箱/               # Web Clipper 收件箱（摄取时自动分类）
 │   ├── <领域>/               # 按知识领域组织
 │   └── assets/              # 图片、附件
 ├── wiki/                    # LLM 维护的知识库
-│   ├── <领域>/               # 领域编译页
-│   ├── 概念/                 # 概念定义页
-│   ├── 资料摘要/             # 资料摘要页
-│   ├── 综合分析/             # 交叉分析
-│   ├── 归档/                 # 已归档页面
-│   └── assets/excalidraw/   # 图表
+│   ├── 00 系统/              # 导航、规则、日志
+│   │   ├── Wiki 目录.md      # 首页
+│   │   ├── 知识库目标.md     # 使命、读者、范围
+│   │   ├── 术语表.md         # 术语定义
+│   │   ├── 操作日志.md       # 操作时间线
+│   │   └── 评审规则.md       # 晋升标准
+│   ├── 10 核心/              # 跨领域稳定知识
+│   │   ├── 地图/
+│   │   ├── 概念/
+│   │   ├── 方法/
+│   │   ├── 实体/
+│   │   └── 综合/
+│   ├── 20 领域/              # 各领域专属内容
+│   │   └── <领域>/
+│   │       ├── 领域地图.md
+│   │       ├── 主题/
+│   │       ├── 案例/
+│   │       └── 工作台/
+│   │           └── 原子卡/   # 原子知识草稿
+│   ├── 30 证据/              # 来源摘要与摘录
+│   │   ├── 资料摘要/
+│   │   └── 摘录/
+│   ├── 40 问答/              # 高复用问答页
+│   └── 90 归档/              # 已过时页面
 ├── canvas/                  # JSON Canvas 可视化地图
-├── templates/               # 页面模板（每种 type 一个，LLM 创建页面时引用）
-├── AGENTS.md                # Wiki 规范（唯一真相源）
+├── graph/                   # 可移植图谱导出
+├── templates/               # 页面模板（每种 kind 一个，LLM 引用）
+├── AGENTS.md                # Wiki 规范 v2（唯一真相源）
 └── CLAUDE.md                # Claude Code 配置（导入 AGENTS.md）
 ```
 
-> **提示**：领域目录（如 `AI Agent/`、`机器学习/`）会在首次摄取时自动创建。告诉 AI 你的知识属于什么领域，或者让它根据内容自行判断。
+> **提示**：`20 领域/` 下的领域目录在首次摄取时自动创建。使用 `--domain <名称>` 指定内容领域。证据层（`30 证据/`）保留用于来源追溯，但不再主导导航。
 
 ## 什么是 LLM Wiki？
 

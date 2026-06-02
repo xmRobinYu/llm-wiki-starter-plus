@@ -1,21 +1,25 @@
 ---
 title: 
-type: query
-status: stable
+kind: query
+layer: reusable
+domains: []
+status: draft
 tags: []
 aliases: []
 created: 
 updated: 
 sources: []
-domain: ""
+stability: time-bound
+bloom: evaluate
+review_cycle: quarterly
 confidence: medium
 summary: ""
 question: ""
-answer_status: answered
+answer_status: partial
 related_pages: []
 ---
 
-> One-sentence answer to the question.
+> One-sentence conclusion for this question.
 
 ## Question
 
@@ -26,6 +30,10 @@ related_pages: []
 ## Evidence
 
 ## Decision Boundary
+
+- Conditions where this answer applies:
+- Conditions where it does NOT apply:
+- Confidence notes:
 
 ## Follow-up Questions
 

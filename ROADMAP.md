@@ -20,25 +20,33 @@ The current state is a working minimum platform for local LLM Wiki workflows, no
 
 ## Completed
 
-### Schema and Templates
+### Schema and Templates (v2 Structured Knowledge Architecture)
 
-- Added `query` page type
+- Replaced source-centric schema with layered knowledge architecture:
+  - System layer (`00 System/` / `00 系统/`)
+  - Core layer (`10 Core/` / `10 核心/`)
+  - Domain layer (`20 Domains/` / `20 领域/`)
+  - Evidence layer (`30 Evidence/` / `30 证据/`)
+  - Queries layer (`40 Queries/` / `40 问答/`)
+  - Archived layer (`90 Archived/` / `90 归档/`)
+- Introduced `kind` + `layer` frontmatter model replacing legacy `type`
+- New page types: `method`, `case`, `moc`, `atom`
+- Updated templates: `source`, `concept`, `entity`, `topic`, `synthesis`, `query`
+- Added decision boundary sections to `method`/`topic`/`synthesis`/`query`
+- Rewrote `AGENTS.md` with promotion path (`raw → source → atom → stable → synthesis`)
+- Added `stability`, `bloom`, `review_cycle`, `confidence` metadata
 - Added `Purpose` / `知识库目标` template pages
-- Strengthened `AGENTS.md` rules for page creation, page relationships, and maintenance
-- Extended `source` template metadata:
-  - `domain`
-  - `summary`
-  - `raw_path`
-  - `source_kind`
-  - `fetched_at`
+- Extended `source` template metadata: `domain`, `summary`, `raw_path`, `source_kind`, `fetched_at`
 
 ### CLI
 
-- Added thin `llm-wiki` CLI
-- Implemented `ingest`
-- Implemented `query`
-- Implemented `lint`
-- Implemented `graph`
+- Modularized CLI into `lib/core.js`, `lib/ingest.js`, `lib/lint.js`, `lib/query.js`, `lib/graph.js`
+- Added schema auto-detection (v2 vs legacy)
+- `ingest`: generates `source` + `atom` drafts + promotion hints (v2); legacy compatible
+- `query`: layer-aware scoring (`canonical` 1.5x, `domain` 1.2x, `evidence` 0.3x); provenance boost to 2.0x
+- `lint`: checks `raw → source` coverage, `source → stable` compilation, orphan atoms, missing domain maps, missing decision boundaries
+- `graph`: exports `kind`/`layer`/`domains` metadata; layer-based filtering and coloring
+- Full read compatibility with legacy wikis maintained
 
 ### Reports and Visualization
 
@@ -54,11 +62,12 @@ The current state is a working minimum platform for local LLM Wiki workflows, no
 ### Testing
 
 - Added smoke test coverage for core CLI workflows
-- `npm test` now validates:
+- `npm test` now validates both v2 and legacy fixtures:
+  - v2: base + lang overlay, layer-aware paths
+  - legacy: backward compatibility for ingest/query/lint/graph paths
   - local markdown ingest
   - URL ingest
-  - query text mode
-  - query JSON mode
+  - query text mode and JSON mode
   - lint report generation
   - graph export generation
 

@@ -220,40 +220,77 @@ The CLI provides a local command surface for future automation:
 - `llm-wiki lint`
 - `llm-wiki graph`
 
-`ingest` copies a local markdown file into `raw/` or fetches a URL into `raw/`, then creates a draft `source` summary page. Use `--domain <name>` to choose the raw subdirectory and persist that domain in source metadata.
+`ingest` copies a local markdown file into `raw/` or fetches a URL into `raw/`, then creates:
+- a draft `source` summary page in `wiki/30 Evidence/Summaries/`
+- 1-3 atom drafts in `wiki/20 Domains/<domain>/Workspace/Atoms/`
+- candidate links and promotion hints on the source page
 
-`lint` prints issues to the terminal and also writes a markdown report to `wiki/reports/`.
+Use `--domain <name>` to choose the raw subdirectory and persist that domain in source metadata.
 
-`query --save` writes a draft page to `wiki/queries/` so the answer can be refined inside the vault.
+`lint` prints issues to the terminal and writes a markdown report to `wiki/00 System/Reports/`. It checks:
+- `raw -> source` coverage
+- `source -> atom/stable` compilation completion
+- orphan atoms, missing domain maps, missing system pages, missing decision boundaries
+
+`query --save` writes a draft page to `wiki/40 Queries/` so the answer can be refined inside the vault.
 
 Use `--top N` to limit results and `--json` for structured output.
 
-`query` now includes match categories such as `title`, `type`, `summary`, `body`, and `link`, plus deduplicated evidence snippets in both terminal and JSON output.
+`query --json` writes a single JSON object to stdout with stable top-level fields: `root`, `question`, `totalMatches`, `top`, `savedPath`, and `results`.
 
-`graph` writes a portable graph export to `graph/graph.json` and a static viewer to `graph/index.html`, with type filters, type coloring, a node detail panel, and a lightweight relationship layout.
+`savedPath` is `null` unless `--save` is used.
+
+Each query result includes:
+- `title`, `kind`, `layer`, `domains`, `score`, `path`, `summary`, `evidence`
+- a structured `why` array for ranking explanations
+
+Query scoring is layer-aware: `canonical` (1.5x), `domain` (1.2x), `reusable` (1.1x), `navigation` (0.9x), `working` (0.6x), `evidence` (0.3x). For provenance queries (containing "source", "citation", "evidence"), evidence layer is boosted to 2.0x.
+
+`graph` writes a portable graph export to `graph/graph.json` and a static viewer to `graph/index.html`, with kind/layer filters, layer-based coloring, a node detail panel, and a lightweight relationship layout.
 
 ## Wiki Structure
 
+The new scaffold uses a **layered knowledge architecture** with six logical layers:
+
 ```
 my-wiki/
-├── raw/                     # Immutable source materials (LLM read-only)
+├── raw/                     # Immutable source materials (LLM read-only, local-first)
 │   ├── inbox/               # Web Clipper inbox (auto-sorted on ingest)
 │   ├── <domain>/            # Organized by knowledge domain
 │   └── assets/              # Images, attachments
 ├── wiki/                    # LLM-maintained knowledge base
-│   ├── <domain>/            # Domain-specific compiled pages
-│   ├── concepts/            # Concept definition pages
-│   ├── summaries/           # Source material summaries
-│   ├── synthesis/           # Cross-cutting analysis
-│   ├── archived/            # Deprecated pages
-│   └── assets/excalidraw/   # Diagrams
+│   ├── 00 System/           # Navigation, rules, logs
+│   │   ├── Index.md         # Home page
+│   │   ├── Purpose.md       # Mission, audience, scope
+│   │   ├── Glossary.md      # Terminology
+│   │   ├── Changelog.md     # Operation timeline
+│   │   └── Review Rules.md  # Promotion criteria
+│   ├── 10 Core/             # Cross-domain stable knowledge
+│   │   ├── Maps/
+│   │   ├── Concepts/
+│   │   ├── Methods/
+│   │   ├── Entities/
+│   │   └── Synthesis/
+│   ├── 20 Domains/          # Domain-specific content
+│   │   └── <Domain>/
+│   │       ├── Domain Map.md
+│   │       ├── Topics/
+│   │       ├── Cases/
+│   │       └── Workspace/
+│   │           └── Atoms/   # Atomic knowledge drafts
+│   ├── 30 Evidence/         # Source summaries and extracts
+│   │   ├── Summaries/
+│   │   └── Extracts/
+│   ├── 40 Queries/          # High-reuse Q&A pages
+│   └── 90 Archived/         # Deprecated pages
 ├── canvas/                  # JSON Canvas visual maps
-├── templates/               # Page templates (one per type, used by LLM)
-├── AGENTS.md                # Wiki schema (single source of truth)
+├── graph/                   # Portable graph exports
+├── templates/               # Page templates (one per kind, used by LLM)
+├── AGENTS.md                # Wiki schema v2 (single source of truth)
 └── CLAUDE.md                # Claude Code config (imports AGENTS.md)
 ```
 
-> **Tip**: Domain directories (e.g. `AI Agent/`, `Machine Learning/`) are created automatically during your first ingest. Just tell the AI what domain your knowledge belongs to — or let it decide based on the content.
+> **Tip**: Domain directories under `20 Domains/` are created automatically during your first ingest. Use `--domain <name>` to scope content. The evidence layer (`30 Evidence/`) is preserved for provenance tracing but no longer dominates navigation.
 
 ## What is LLM Wiki?
 

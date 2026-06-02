@@ -14,3 +14,12 @@ node_modules/
 # Temporary
 *.tmp
 *.bak
+
+# Raw materials: local-first, not tracked by default
+# Users can explicitly track selected raw files with git add -f
+/raw/**/*.md
+!/raw/sortspec.md
+!/raw/**/sortspec.md
+
+# Graph exports are derived artifacts (rebuild with `llm-wiki graph`)
+/graph/

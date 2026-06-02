@@ -33,7 +33,26 @@ That remains the base.
 
 ## What `plus` Adds
 
-### 1. Schema Hardening
+### 1. v2 Structured Knowledge Architecture
+
+Replaced the flat source-centric structure with a layered architecture:
+
+| Layer | Directory | Purpose |
+|-------|-----------|---------|
+| System | `00 System/` | Navigation, rules, logs |
+| Core | `10 Core/` | Cross-domain stable knowledge |
+| Domain | `20 Domains/` | Domain-specific content |
+| Evidence | `30 Evidence/` | Source summaries and extracts |
+| Queries | `40 Queries/` | High-reuse Q&A |
+| Archived | `90 Archived/` | Deprecated pages |
+
+Key schema changes:
+- `kind` + `layer` frontmatter replacing legacy `type`
+- Promotion path: `raw → source → atom → stable → synthesis`
+- `stability`, `bloom`, `review_cycle`, `confidence` metadata
+- Domain-first default workflow
+
+### 2. Schema Hardening
 
 - `query` page type
 - `Purpose` / `知识库目标`
@@ -41,13 +60,14 @@ That remains the base.
 - stronger page relationship rules
 - richer `source` metadata
 
-### 2. Template Expansion
+### 3. Template Expansion
 
-- added `query` templates
-- added purpose templates
-- aligned `source` template with richer metadata fields
+- added `method`, `case`, `moc`, `atom` templates
+- added decision boundary sections to key page types
+- aligned `source` template with v2 evidence-layer positioning
+- aligned all templates with `kind`/`layer` frontmatter
 
-### 3. Local CLI
+### 4. Local CLI
 
 The original project did not provide a working local command surface for wiki operations.
 
@@ -58,35 +78,41 @@ The original project did not provide a working local command surface for wiki op
 - `llm-wiki lint`
 - `llm-wiki graph`
 
-### 4. Query Workflow
+All commands auto-detect v2 vs legacy schema and adapt paths accordingly.
 
-- ranked local page search
+### 5. Query Workflow
+
+- ranked local page search with layer-aware scoring
 - `--top N`
-- `--json`
+- `--json` with `kind`/`layer`/`domains` fields
 - `--save` draft query page generation
+- provenance query detection (boosts evidence layer)
 
-### 5. Lint Workflow
+### 6. Lint Workflow
 
 - terminal lint summary
-- markdown report generation
+- markdown report generation (schema-aware paths)
 - changelog append
+- v2-specific checks: orphan atoms, missing domain maps, missing decision boundaries
 
-### 6. Graph Workflow
+### 7. Graph Workflow
 
-- `graph.json` export
+- `graph.json` export with `kind`/`layer`/`domains` metadata
 - `index.html` static viewer
-- type filtering
+- kind and layer filtering
+- layer-based coloring (evidence layer muted)
 - node details
 - incoming/outgoing relation inspection
 
-### 7. Testing
+### 8. Testing
 
 The original repo did not have this CLI smoke coverage.
 
 `plus` adds:
 
 - `npm test`
-- temporary-copy smoke validation for all core CLI workflows
+- dual-fixture smoke validation (v2 + legacy)
+- coverage for all core CLI workflows
 
 ## Architectural Difference
 

@@ -809,9 +809,9 @@ prepare_wiki() {
   local base_dirs=("wiki/assets/excalidraw" "canvas")
   local lang_dirs=()
   if [[ "$WIKI_LANG" == "zh" ]]; then
-    lang_dirs=("raw/收件箱" "raw/assets" "wiki/概念" "wiki/资料摘要" "wiki/综合分析" "wiki/归档")
+    lang_dirs=("raw/收件箱" "raw/assets" "wiki/10 核心/概念" "wiki/10 核心/方法" "wiki/10 核心/实体" "wiki/10 核心/综合" "wiki/10 核心/地图" "wiki/20 领域" "wiki/30 证据/资料摘要" "wiki/30 证据/摘录" "wiki/40 问答" "wiki/90 归档")
   else
-    lang_dirs=("raw/inbox" "raw/assets" "wiki/concepts" "wiki/summaries" "wiki/synthesis" "wiki/archived")
+    lang_dirs=("raw/inbox" "raw/assets" "wiki/10 Core/Concepts" "wiki/10 Core/Methods" "wiki/10 Core/Entities" "wiki/10 Core/Synthesis" "wiki/10 Core/Maps" "wiki/20 Domains" "wiki/30 Evidence/Summaries" "wiki/30 Evidence/Extracts" "wiki/40 Queries" "wiki/90 Archived")
   fi
   for d in "${base_dirs[@]}" "${lang_dirs[@]}"; do
     mkdir -p "$target/$d"
@@ -828,9 +828,9 @@ replace_placeholders() {
   local files_to_patch=("CLAUDE.md" "AGENTS.md" "README.md")
 
   if [[ "$WIKI_LANG" == "zh" ]]; then
-    files_to_patch+=("wiki/知识库概览.md" "wiki/Wiki 目录.md" "wiki/操作日志.md")
+    files_to_patch+=("wiki/00 系统/知识库目标.md" "wiki/00 系统/Wiki 目录.md" "wiki/00 系统/操作日志.md" "wiki/00 系统/术语表.md" "wiki/00 系统/评审规则.md")
   else
-    files_to_patch+=("wiki/Overview.md" "wiki/Index.md" "wiki/Changelog.md")
+    files_to_patch+=("wiki/00 System/Purpose.md" "wiki/00 System/Index.md" "wiki/00 System/Changelog.md" "wiki/00 System/Glossary.md" "wiki/00 System/Review Rules.md")
   fi
 
   for f in "${files_to_patch[@]}"; do

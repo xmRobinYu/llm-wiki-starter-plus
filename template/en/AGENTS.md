@@ -1,4 +1,4 @@
-# <Wiki Name> — LLM Wiki Schema
+# <Wiki Name> — LLM Wiki Schema v2
 
 > Built on [Andrej Karpathy's LLM Wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f).
 > This file defines how the LLM maintains this knowledge base.
@@ -11,11 +11,22 @@
 
 ## Architecture
 
-Three-layer structure:
+Single vault, logical layers:
 
-1. **`raw/`** — Immutable source documents. The LLM reads but never writes here.
-2. **`wiki/`** — LLM-generated and maintained markdown pages. The LLM fully owns this layer.
+1. **`raw/`** — Immutable source documents. LLM reads but never writes. Local-first, not tracked by default.
+2. **`wiki/`** — LLM-generated and maintained markdown pages. Organized by layer.
 3. **This file (`AGENTS.md`)** — Schema specification. Defines structure, conventions, and workflows.
+
+Layer structure:
+
+| Layer | Directory | Purpose |
+|-------|-----------|---------|
+| System | `00 System/` | Rules, navigation, logs |
+| Core | `10 Core/` | Cross-domain stable knowledge |
+| Domain | `20 Domains/` | Domain-specific content |
+| Evidence | `30 Evidence/` | Source summaries and extracts |
+| Queries | `40 Queries/` | High-reuse Q&A |
+| Archived | `90 Archived/` | Deprecated pages |
 
 Prefer a small number of durable, well-linked pages over a large number of shallow, repetitive pages.
 
@@ -23,297 +34,161 @@ Prefer a small number of durable, well-linked pages over a large number of shall
 
 ```
 <wiki-name>/
-├── raw/                        # Layer 1: Source materials (immutable)
-│   ├── inbox/                  # Web Clipper inbox (unified entry point)
+├── raw/                        # Evidence layer: source materials (immutable, local-first)
+│   ├── inbox/                  # Web Clipper unified entry point
 │   ├── assets/                 # Images, attachments
 │   └── <domain>/               # Organized by knowledge domain
-├── wiki/                       # Layer 2: LLM-maintained wiki
-│   ├── <domain>/               # Domain-specific compiled pages
-│   ├── concepts/               # Concept pages (cross-domain knowledge axis)
-│   ├── summaries/              # One summary per ingested raw file
-│   ├── synthesis/              # Cross-cutting analysis and insights
-│   ├── queries/                # High-value Q&A pages worth preserving
-│   ├── archived/               # Deprecated pages
-│   ├── reports/                # Lint / coverage / contradiction reports
-│   ├── assets/excalidraw/      # Excalidraw diagrams
-│   ├── Index.md                # Content index (LLM-maintained)
-│   ├── Changelog.md            # Operation timeline log
-│   ├── Purpose.md              # Scope, audience, and collection boundaries
-│   └── Overview.md             # Wiki landing page
+├── wiki/                       # Knowledge layer: LLM-maintained
+│   ├── 00 System/              # Navigation, rules, logs
+│   │   ├── Purpose.md
+│   │   ├── Index.md            # Home page
+│   │   ├── Glossary.md
+│   │   ├── Changelog.md
+│   │   └── Review Rules.md
+│   ├── 10 Core/                # Cross-domain stable knowledge
+│   │   ├── Maps/
+│   │   ├── Concepts/
+│   │   ├── Methods/
+│   │   ├── Entities/
+│   │   └── Synthesis/
+│   ├── 20 Domains/             # Domain-specific
+│   │   └── <Domain>/
+│   │       ├── Domain Map.md
+│   │       ├── Topics/
+│   │       ├── Cases/
+│   │       └── Workspace/
+│   │           └── Atoms/
+│   ├── 30 Evidence/            # Source layer
+│   │   ├── Summaries/
+│   │   └── Extracts/
+│   ├── 40 Queries/             # High-reuse Q&A
+│   ├── 90 Archived/            # Deprecated pages
+│   ├── canvas/                 # JSON Canvas visual maps
+│   └── sortspec.md
 ├── graph/                      # Portable graph exports (derived artifacts)
-├── canvas/                     # JSON Canvas visual maps
-├── templates/                  # Page templates (one per type, used by LLM)
-├── CLAUDE.md                   # Claude Code schema (imports this file)
+├── templates/                  # Page templates
 ├── AGENTS.md                   # This schema file
+├── CLAUDE.md                   # Claude Code schema
 └── README.md                   # Repository documentation
 ```
 
-Domain directories under `raw/` and `wiki/` are created automatically during the first ingest — no need to pre-configure them.
+Default strategy: **domain-first**. Without explicit instruction, do not use the full wiki as the default working context.
 
-## Page Format
+## Page Model
+
+### Page Types (kind) and Layers (layer)
+
+| kind | layer | Description | Default Location |
+|---|---|---|---|
+| `moc` | navigation | Content maps, navigation | `00 System/` or `20 Domains/*/Domain Map` |
+| `concept` | canonical | Stable concept definitions | `10 Core/Concepts/` |
+| `method` | canonical | Methods, frameworks, processes | `10 Core/Methods/` |
+| `entity` | canonical | People, organizations, products | `10 Core/Entities/` |
+| `synthesis` | canonical | Cross-source synthesis | `10 Core/Synthesis/` |
+| `topic` | domain | Domain topic pages | `20 Domains/*/Topics/` |
+| `case` | domain | Cases, events, post-mortems | `20 Domains/*/Cases/` |
+| `atom` | working | Atomic cards, intermediate state | `20 Domains/*/Workspace/Atoms/` |
+| `source` | evidence | Single-source summaries | `30 Evidence/Summaries/` |
+| `query` | reusable | High-reuse Q&A | `40 Queries/` |
+
+Note: `atom` is a workspace intermediate state. **Not emphasized as a primary navigation layer** for end users.
 
 ### Frontmatter Spec
 
-Every wiki page must include this frontmatter:
-
 ```yaml
 ---
-title: Page Title
-type: entity | concept | topic | comparison | source | synthesis | query
-status: draft | stable | archived
-tags: [tag1, tag2, tag3]
-aliases: [alt-name-1, alt-name-2]     # Optional, for Obsidian search/linking
-created: YYYY-MM-DD
-updated: YYYY-MM-DD
-sources:
-  - "[[Summary：source-name]]"         # Always use wikilink format
-domain: ""                             # Optional, preferred for topic/entity/source pages
-confidence: high | medium | low
-summary: ""                            # One-sentence description for quick scanning
-related_concepts: []                   # Optional, concept pages only
-source_url: https://...                # Optional, source pages only
-media: article | paper | video         # Optional, source pages only
-raw_path: raw/...                      # Optional, source pages only
-source_kind: file | url                # Optional, source pages only
-fetched_at: YYYY-MM-DDTHH:MM:SSZ       # Optional, source pages only
+title: "Page Title"
+kind: concept            # Page type
+layer: canonical         # Belongs to layer
+status: seed | draft | stable | archived
+domains: [domain-id]     # Logical sub-library, multiple allowed
+summary: "One-sentence summary"
+sources: []
+aliases: []
+tags: []
+stability: evergreen | volatile | time-bound
+bloom: remember | understand | apply | analyze | evaluate | create
+review_cycle: weekly | monthly | quarterly
+confidence: low | medium | high
 ---
 ```
 
-### Body Structure
+### Promotion Path
 
-When creating a wiki page, **read `templates/<type>.md` first** to get the matching template, then strictly follow its section structure. Do not invent your own sections.
+```
+raw -> source -> atom -> concept/method/entity/topic -> synthesis
+```
 
-| type | Template file | Purpose |
-|------|--------------|---------|
-| entity | `templates/entity.md` | Products, projects, organizations, people |
-| concept | `templates/concept.md` | Concept definitions |
-| topic | `templates/topic.md` | Domain topics, comprehensive guides |
-| comparison | `templates/comparison.md` | Comparative analysis |
-| source | `templates/source.md` | Source material summaries |
-| synthesis | `templates/synthesis.md` | Cross-cutting analysis & insights |
-| query | `templates/query.md` | Reusable answers to concrete user questions |
-
-### Page Naming
-
-- **Filename = frontmatter `title`**: filename must match the title exactly
-- Half-width `:` is not allowed in macOS filenames — use full-width `：` (e.g., `Summary：Topic.md`)
-- Summary pages: `Summary：` prefix + short name
-- Concept pages: descriptive name, e.g., `Transformer.md`, `RAG (Retrieval-Augmented Generation).md`
-
-### Concept Page Principles
-
-- 100–250 lines each, focused on authoritative definitions
-- `confidence: high` when backed by `raw/` sources; `confidence: medium` when based on training knowledge alone
-- If a detailed domain page already exists, keep the concept page as a concise definition + link — don't duplicate content
-- All concept pages must include the `concept` tag
+Default thresholds:
+- Content reused by 2+ domains → suggest promoting to Core layer
+- Conclusion supported by 3+ sources → suggest promoting to synthesis
 
 ## Page Creation Rules
 
-- **Update before creating**: if an existing page can absorb the new information cleanly, update it instead of creating a new page.
-- **Read `wiki/Purpose.md` first** when deciding whether something belongs in this wiki, how detailed it should be, and which tradeoffs matter most.
-- **`source`**: every formally ingested raw document should map to exactly one summary page in `wiki/summaries/`.
-- **`entity`**: create only when a person, product, organization, tool, protocol, or project becomes a reusable reference point across multiple pages.
-- **`concept`**: create only for stable, reusable concepts; avoid pages for one-off buzzwords or transient phrasing.
-- **`topic`**: create when a cluster of sources, entities, and concepts forms a broad subject that benefits from a guide-style page.
-- **`comparison`**: create when the user is deciding between alternatives or when the wiki repeatedly encounters the same choice boundary.
-- **`synthesis`**: create only when multiple sources together justify a new thesis, framework, or insight.
-- **`query`**: create when a concrete question and answer will likely be useful again; do not save trivial or one-off exchanges.
-
-## Page Relationship Rules
-
-- `raw/` stores immutable originals.
-- `wiki/summaries/` stores one-page summaries of raw sources.
-- All other wiki pages are compiled knowledge and should cite summary pages rather than duplicating raw content.
-- Pages should link bidirectionally when the relationship is materially useful to navigation or reasoning.
-
-## Tag System
-
-Use a **controlled vocabulary**. Keep tags concise (≤6 words per tag).
-
-**Content-type tags (what form of knowledge is this?):**
-`concept`, `tutorial`, `deep-dive`, `overview`, `opinion`, `news`, `tool`, `paradigm`, `anti-pattern`, `case-study`, `benchmark`, `best-practice`
-
-**Meta tags (lifecycle properties):**
-`evergreen` (stable, long-lasting), `fast-moving` (changes quickly, review periodically), `foundational` (prerequisite knowledge), `advanced` (requires deep background)
-
-**Domain tags:** Define your own based on your knowledge domain. Keep them consistent.
-
-<!-- Example domain tags for different fields:
-  AI:       llm, agent, coding, prompt-engineering, infrastructure, ecosystem, research
-  Software: frontend, backend, architecture, devops, database, security, team
-  Research: literature, methodology, experiment, data-analysis, writing
--->
-
-**Tag principles:**
-- Check existing tags before creating new ones
-- One word, one meaning: unify synonyms into a single tag
-- Keep vendor/product/protocol names in their original form (e.g., `openai`, `claude-code`)
+- **Update before creating**: if an existing page can absorb new information cleanly, update it.
+- **Read `wiki/00 System/Purpose.md` first** when deciding whether something belongs in this wiki.
+- **`source`**: every formally ingested raw document maps to one source page. Source pages are evidence-layer drafts, NOT final stable knowledge.
+- **`atom`**: atomic knowledge cards distilled from sources, one card one thing.
+- **`concept`**: create only for stable, reusable concepts.
+- **`method`**: standardized descriptions of methods, frameworks, and processes.
+- **`topic`**: comprehensive descriptions of domain topics.
+- **`synthesis`**: create only when multiple sources together justify a new thesis.
+- **`query`**: create when a concrete Q&A will likely be useful again.
 
 ## Workflows
 
 ### 1. Ingest
 
-When the user adds new material to `raw/` and requests ingestion:
+Default output: `source + atom + candidate links + promotion hints`
 
-1. **Read** the source document completely.
-2. **Discuss** key points with the user to confirm emphasis.
-3. **Create** a summary page in `wiki/summaries/` with proper frontmatter.
-
-#### URL Direct Ingest
-
-Users can provide a URL directly. The LLM fetches and ingests it:
-
-```
-Ingest this article: https://example.com/some-article
-```
-
-Flow:
-1. Use `defuddle` to extract clean markdown: `npx defuddle parse <url> --markdown`
-2. Save the cleaned markdown to `raw/<domain>/` as an immutable source document
-3. Continue with the standard ingest flow (steps 1–10)
-
-#### Inbox Ingest
-
-`raw/inbox/` is the **unified inbox** for browser Web Clipper content. When the user says "ingest new materials", the LLM **must first scan** `raw/inbox/`:
-
-1. **Scan** all files in `raw/inbox/`
-2. **Read** each file, determine its knowledge domain
-3. **Move** the file to the matching `raw/<domain>/` directory
-4. **Continue** standard ingest flow for each file
-
-Files are moved out of `raw/inbox/` after processing (no copies kept). Check this directory on every ingest operation.
-
-#### Standard Flow (continued)
-4. **Determine domain** — Place the page in the matching directory. If it spans multiple domains, choose the best match and use tags for cross-referencing.
-5. **Update or create** entity pages, concept pages, and topic pages in the corresponding domain directory.
-6. **Diagram generation** — If the material meets any of these conditions, generate at least one diagram and embed it in the relevant wiki page:
-   - Describes a system/framework **architecture** (layers, modules, component topology)
-   - Contains an **execution loop** or process (pipelines, cyclic flows)
-   - Contains **multi-actor collaboration** (multi-service interaction, message passing)
-   - Contains **data flow** (input → processing → output)
-   - Contains **hierarchy** or classification (capability stacks, category trees)
-
-   Diagram tool selection: architecture/flow/data-flow → **Excalidraw** (stored in `wiki/assets/excalidraw/`); relationship maps → **Obsidian Canvas** via `obsidian-canvas-creator` skill (stored in `canvas/`); simple sequence/state → **Mermaid** (inline).
-
-   Embed with: `![[diagram-name.excalidraw]]` or Mermaid code block. **Never** use ASCII art.
-
-   Skip when: pure opinion pieces / data rankings; single linear steps (≤3); existing diagram on the same topic can be reused.
-7. **Concept extraction** — Identify core concepts in the material:
-   - Check if `wiki/concepts/` already has a page for each concept
-   - If not, create a new concept page (use concept page format)
-   - If yes, update the existing page's sources and related content
-8. **Flag contradictions** — If new material conflicts with existing pages, note both positions with citations.
-9. **Add cross-references** — Add bi-directional `[[wikilinks]]` between new and existing pages.
-10. **Update index and log**:
-    - Update `wiki/Index.md` with new page entries
-    - Append to `wiki/Changelog.md`:
-    ```
-    ## [YYYY-MM-DD] ingest | Material Title
-    - Source: raw/<domain>/<filename>.md
-    - New pages: list
-    - Updated pages: list
-    - New concepts: list (if any)
-    - New diagrams: list (if any)
-    - Key insight: one sentence
-    ```
+1. Read the source document
+2. Save to `raw/<domain>/`
+3. Create source page in `30 Evidence/Summaries/`
+4. Generate 1~5 atom drafts in `20 Domains/<domain>/Workspace/Atoms/`
+5. Annotate atom candidates and promotion hints on the source page
+6. **Do NOT create new stable knowledge pages by default**
+7. Update changelog
 
 ### 2. Query
 
-When the user asks a question:
-
-1. **Read** `wiki/Index.md` to find relevant pages.
-2. **Read** relevant wiki pages (not raw materials — the wiki is compiled knowledge).
-3. **Synthesize** an answer with `[[page]]` citations.
-4. **If the answer has substantial value**, suggest saving it as a new wiki page (comparison, synthesis, etc.).
-   - If the question is concrete and likely to recur, prefer saving it as a `query` page in `wiki/queries/`.
-5. **If the wiki lacks relevant information**, state this clearly — then check raw materials or suggest sources to ingest.
-6. **Append** to `wiki/Changelog.md`:
-    ```
-    ## [YYYY-MM-DD] query | Brief question
-    - Pages consulted: list
-    - Result: answered | saved as wiki/synthesis/page.md | knowledge gap found
-    ```
+1. Default to consulting Core and Domain layer stable knowledge pages first
+2. When tracing provenance, drill down into Evidence layer
+3. Synthesize answers with `[[wikilink]]` citations
+4. If the answer has substantial value, suggest saving as a query page
+5. Update changelog
 
 ### 3. Lint
 
-When the user requests a health check (or run periodically):
+1. Check `raw -> source` coverage
+2. Check `source -> atom/stable` compilation completion
+3. Find orphan atoms, missing domain maps, missing decision boundaries
+4. Check periodic review based on `review_cycle`
+5. Write reports to `00 System/Reports/`
 
-1. **Orphan pages** — Pages with no inbound links.
-2. **Dead links** — `[[wikilinks]]` pointing to non-existent pages.
-3. **Stale pages** — Not updated in 30+ days and tagged `fast-moving`.
-4. **Missing pages** — Concepts mentioned across multiple pages but lacking their own page.
-5. **Contradictions** — Conflicting claims across pages (flag for human review).
-6. **Tag violations** — Tags not in the controlled vocabulary, duplicates, untagged pages.
-7. **Resource coverage** — Raw materials not yet ingested.
-8. **Concept coverage** — Concepts frequently mentioned in domain pages but missing from `wiki/concepts/`.
-9. **Quality checks** — Pages missing summary/frontmatter, comparison pages without decision guidance, synthesis pages without a clear thesis.
-10. **Write a detailed report** to `wiki/reports/` when findings are non-trivial, then append a short summary to `wiki/Changelog.md`.
+## Tag System
 
-## Obsidian Integration
+Use a **controlled vocabulary**. Keep tags concise (≤6 words per tag).
 
-This directory is an Obsidian vault. Follow these rules:
+**Content-type tags:** `concept`, `tutorial`, `deep-dive`, `overview`, `opinion`, `news`, `tool`, `paradigm`, `anti-pattern`, `case-study`, `benchmark`, `best-practice`
 
-- Use `[[wikilinks]]` syntax for cross-references (do not use markdown links for internal pages).
-- Use `![[image.png]]` to embed images from `raw/assets/`.
-- Respect Obsidian's `.obsidian/` config directory — do not modify it directly.
+**Meta tags:** `evergreen`, `fast-moving`, `foundational`, `advanced`
 
-### Visualization
-
-Wiki pages use diagrams instead of ASCII art, in this priority order:
-
-| Priority | Tool | Use Case | Storage |
-|:---:|------|----------|---------|
-| 1 | **Excalidraw** | Flowcharts, architecture, data flow, complex logic | `wiki/assets/excalidraw/` |
-| 2 | **Obsidian Canvas** (via `obsidian-canvas-creator` skill) | Knowledge relationship maps, spatial layout | `canvas/` |
-| 3 | **Mermaid** | Sequence diagrams, state diagrams, simple inline charts | Inline in wiki pages |
-
-Simple linear flows and comparison tables can stay as text.
-
-**Canvas creation**: always go through the `obsidian-canvas-creator` skill (from `axtonliu/visual-skills`) for `.canvas` files. Do not use the `json-canvas` skill from `kepano/obsidian-skills` even though it is installed — `obsidian-canvas-creator` adds MindMap layout, auto-edges, content-aware sizing, and color coding tailored for LLM Wiki.
-
-**Excalidraw specs:**
-- Store in `wiki/assets/excalidraw/`, name as `<topic> <type>.excalidraw.md`
-- Embed with: `![[diagram-name.excalidraw]]`
-- Unified palette: blue `#a5d8ff` (main flow), green `#b2f2bb` (output), orange `#ffd8a8` (condition), purple `#d0bfff` (extension)
-- Font: `fontFamily = 5`, `roughness = 0`
-- Fill: `fillStyle = 'solid'` (no hachure / cross-hatch)
-
-### Web Scraping with Defuddle
-
-When ingesting web articles, first extract clean markdown with `defuddle`:
-```bash
-npx defuddle parse https://example.com/article --markdown
-```
-Strips navigation, ads, and clutter — saves tokens and produces cleaner source material.
-
-## Confidence Levels
-
-- **high** — Reliable source, multiple corroborating references, stable information.
-- **medium** — Single source, or nuances may not be fully captured.
-- **low** — Preliminary, based on limited data, or likely to change quickly.
+**Domain tags:** Define your own based on your knowledge domain. Keep them consistent.
 
 ## Constraints
 
-- Never modify files in `raw/`. They are immutable source documents.
+- Never modify files in `raw/`.
 - Never fabricate information. Mark `confidence: low` and note uncertainty when unsure.
 - Always use the frontmatter format above when creating wiki pages.
-- Always update `wiki/Index.md` and `wiki/Changelog.md` after every operation.
+- Always update the changelog after every operation.
 - Keep pages focused. Split pages exceeding ~500 lines.
 - Prefer updating existing pages over creating new ones when content overlaps.
 - The `sources` field in frontmatter must use `[[wikilink]]` format.
-- **Preserve source links**: When mentioning GitHub repos, official docs, or authoritative sources, embed clickable URLs inline as `[display name](url)` at first mention — don't collect them in a separate references section.
-- **Ingest / lint / query operations only modify wiki pages, never `CLAUDE.md` or `AGENTS.md`.** Schema files are only edited when the user explicitly requests schema changes.
+- **Ingest / lint / query operations only modify wiki pages, never `CLAUDE.md` or `AGENTS.md`.**
 
-### Knowledge Grouping
+## Repository Strategy
 
-When the same knowledge topic has **>1 document** in a directory, group them into a dedicated subfolder. This applies to both `raw/` and `wiki/`.
-
-**Trigger:** When a second document on the same topic appears in a directory, create a subfolder and move all related documents into it.
-
-**Naming:** Folder name = topic name, keep it concise. Use the same folder name in both `raw/` and `wiki/`.
-
-**Exception:** Cross-topic overviews or comparisons stay in the domain root directory.
-
-### Archive
-
-`wiki/archived/` stores deprecated or unmaintained pages. During lint, suggest moving stale pages (30+ days old and tagged `fast-moving`) to `wiki/archived/`. Archived pages keep their original content but add `archived: YYYY-MM-DD` to frontmatter and are removed from `wiki/Index.md`.
+- Same vault, same Git repository
+- `raw/` local-first, not tracked by default
+- `wiki/`, system pages, templates can be pushed to remote
+- Feishu/Lark documents can serve as supplementary backup for selected source materials

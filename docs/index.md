@@ -5,8 +5,13 @@
 - [../README.md](../README.md)
 - [../ROADMAP.md](../ROADMAP.md)
 - [cli.md](./cli.md)
+- [migration-v2.md](./migration-v2.md) — Migrate from legacy to v2 structured knowledge architecture
 - [llm-wiki-starter-plus-vs-original.md](./llm-wiki-starter-plus-vs-original.md)
 - [../README.zh-CN.md](../README.zh-CN.md)
+
+## Active Plans
+
+- [plan/2026-06-02-query-system-page-optimization-plan.md](./plan/2026-06-02-query-system-page-optimization-plan.md)
 
 These documents reflect the current repository-level positioning as `llm-wiki-starter-plus`.
 

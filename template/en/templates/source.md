@@ -1,12 +1,17 @@
 ---
 title: 
-type: source
+kind: source
+layer: evidence
+domains: []
 status: draft
 tags: []
+aliases: []
 created: 
 updated: 
 sources: []
-domain: ""
+stability: volatile
+bloom: remember
+review_cycle: monthly
 confidence: medium
 summary: ""
 source_url: 
@@ -16,7 +21,7 @@ source_kind: ""
 fetched_at: ""
 ---
 
-> One-paragraph summary of this source material.
+> ⚠️ This page is an evidence-layer draft, NOT final stable knowledge. Core ideas should be distilled into atoms, then integrated into concept/method/topic pages.
 
 ## Key Takeaways
 
@@ -25,6 +30,10 @@ fetched_at: ""
 ## Detailed Notes
 
 ## Quotes & Data
+
+## Atom Candidates
+
+- 
 
 ## Related
 

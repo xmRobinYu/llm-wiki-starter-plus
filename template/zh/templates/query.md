@@ -1,17 +1,21 @@
 ---
 title: 
-type: query
-status: stable
+kind: query
+layer: reusable
+domains: []
+status: draft
 tags: []
 aliases: []
 created: 
 updated: 
 sources: []
-domain: ""
+stability: time-bound
+bloom: evaluate
+review_cycle: quarterly
 confidence: medium
 summary: ""
 question: ""
-answer_status: answered
+answer_status: partial
 related_pages: []
 ---
 
@@ -26,6 +30,10 @@ related_pages: []
 ## 证据
 
 ## 决策边界
+
+- 该答案的适用条件：
+- 不适用的情况：
+- 置信度说明：
 
 ## 后续问题
 

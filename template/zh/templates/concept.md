@@ -1,13 +1,19 @@
 ---
 title: 
-type: concept
+kind: concept
+layer: canonical
+domains: []
+status: draft
 tags: [概念]
 aliases: []
 created: 
 updated: 
 sources: []
-related_concepts: []
+stability: evergreen
+bloom: understand
+review_cycle: quarterly
 confidence: medium
+summary: ""
 ---
 
 > 一句话权威定义（≤50 字）
